@@ -5,20 +5,17 @@
  * ---------------------------------------
  * The MiniMax API key must never reach the browser. This endpoint is the only
  * place it is read (`process.env.MINIMAX_API_KEY`). The client sends a small,
- * already-sanitised game context; we build the prompt, call MiniMax, and return
- * just the text.
+ * already-sanitised game context; we build the prompt, call the model, and
+ * return just the text.
  *
- * Configuration (all via environment variables, so the same code works for
- * MiniMax's domestic and international hosts and survives model renames):
+ * MiniMax exposes an **Anthropic-compatible** endpoint, so this speaks the
+ * Anthropic Messages API shape (`POST {base}/v1/messages`, a top-level
+ * `system` string, and a `content: [{type, text}]` response).
+ *
+ * Configuration (environment variables):
  *   MINIMAX_API_KEY   (required)  - your key
- *   MINIMAX_BASE_URL  (optional)  - default https://api.minimaxi.chat/v1
- *                                   domestic: https://api.minimax.chat/v1
- *   MINIMAX_CHAT_PATH (optional)  - default /text/chatcompletion_v2
- *                                   set to /chat/completions for an
- *                                   OpenAI-compatible endpoint
- *   MINIMAX_MODEL     (optional)  - default MiniMax-Text-01
- *                                   domestic often: abab6.5s-chat
- *   MINIMAX_GROUP_ID  (optional)  - only if your account requires it
+ *   MINIMAX_BASE_URL  (optional)  - default https://api.minimaxi.com/anthropic
+ *   MINIMAX_MODEL     (optional)  - default MiniMax-M3
  *
  * If MINIMAX_API_KEY is missing we return 501 so the UI can degrade to
  * "AI not configured here" rather than showing an error.
@@ -27,10 +24,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const API_KEY = process.env.MINIMAX_API_KEY;
-const BASE_URL = process.env.MINIMAX_BASE_URL ?? 'https://api.minimaxi.chat/v1';
-const CHAT_PATH = process.env.MINIMAX_CHAT_PATH ?? '/text/chatcompletion_v2';
-const MODEL = process.env.MINIMAX_MODEL ?? 'MiniMax-Text-01';
-const GROUP_ID = process.env.MINIMAX_GROUP_ID;
+const BASE_URL =
+  process.env.MINIMAX_BASE_URL ?? 'https://api.minimaxi.com/anthropic';
+const MODEL = process.env.MINIMAX_MODEL ?? 'MiniMax-M3';
+
+/** Short blurb — no need for a large budget. */
+const MAX_TOKENS = 320;
 
 const SYSTEM_PROMPT = [
   'You are a concise sports desk writer.',
@@ -78,44 +77,45 @@ export default async function handler(
   }
 
   try {
-    const upstream = await fetch(
-      `${BASE_URL}${CHAT_PATH}${GROUP_ID ? `?GroupId=${GROUP_ID}` : ''}`,
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: buildPrompt(game) },
-          ],
-          temperature: 0.4,
-          max_tokens: 220,
-        }),
+    const upstream = await fetch(`${BASE_URL}/v1/messages`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        // MiniMax's Anthropic-compatible endpoint authenticates via the
+        // `X-Api-Key` header (verified against its error response), same as
+        // Anthropic's own Messages API.
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
       },
-    );
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        temperature: 0.4,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: buildPrompt(game) }],
+      }),
+    });
 
     if (!upstream.ok) {
-      console.error('MiniMax HTTP error', upstream.status, await safeText(upstream));
+      console.error(
+        'MiniMax HTTP error',
+        upstream.status,
+        await safeText(upstream),
+      );
       res.status(502).json({ error: 'upstream_error' });
       return;
     }
 
-    const data = (await upstream.json()) as MiniMaxResponse;
+    const data = (await upstream.json()) as AnthropicMessage;
 
-    // MiniMax returns HTTP 200 even for logical errors; the real status is in
-    // base_resp.status_code (0 = success).
-    if (data.base_resp?.status_code != null && data.base_resp.status_code !== 0) {
-      console.error('MiniMax logical error', data.base_resp);
-      res.status(502).json({ error: 'upstream_error' });
-      return;
-    }
+    const recap = (data.content ?? [])
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text ?? '')
+      .join('')
+      .trim();
 
-    const recap = data.choices?.[0]?.message?.content?.trim();
     if (!recap) {
+      console.error('MiniMax empty/blocked response', JSON.stringify(data).slice(0, 500));
       res.status(502).json({ error: 'empty_response' });
       return;
     }
@@ -159,7 +159,7 @@ async function safeText(response: Response): Promise<string> {
   }
 }
 
-interface MiniMaxResponse {
-  choices?: { message?: { content?: string } }[];
-  base_resp?: { status_code?: number; status_msg?: string };
+/** The slice of the Anthropic Messages response we read. */
+interface AnthropicMessage {
+  content?: { type?: string; text?: string }[];
 }
