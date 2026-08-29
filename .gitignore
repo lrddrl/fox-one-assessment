@@ -21,6 +21,9 @@ __pycache__/
 .venv/
 venv/
 
+# interview prep docs — not part of the submission
+prep/
+
 # editor / tooling / OS
 .vscode/
 .idea/
