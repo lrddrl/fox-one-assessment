@@ -1,19 +1,47 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { AppHeader } from './components/AppHeader';
 import { GameList } from './components/GameList';
 import { LeagueTabs } from './components/LeagueTabs';
-import { ScoreboardToolbar } from './components/ScoreboardToolbar';
+import {
+  ScoreboardToolbar,
+  type Filters,
+} from './components/ScoreboardToolbar';
 import { DEFAULT_LEAGUE_ID, getLeague } from './config/leagues';
 import { useScoreboard } from './hooks/useScoreboard';
+import { gameHasFavorite, useFavorites } from './state/favorites';
 import styles from './App.module.css';
+
+const NO_FILTERS: Filters = { foxOnly: false, favoritesOnly: false };
 
 export default function App() {
   const [leagueId, setLeagueId] = useState(DEFAULT_LEAGUE_ID);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
 
   const scoreboard = useScoreboard(leagueId, autoRefresh);
+  const { isFavorite, count: favoriteCount } = useFavorites();
   const league = getLeague(leagueId);
+
+  const toggleFilter = useCallback((key: keyof Filters) => {
+    setFilters((current) => ({ ...current, [key]: !current[key] }));
+  }, []);
+
+  const clearFilters = useCallback(() => setFilters(NO_FILTERS), []);
+
+  // Filtering happens here, above the list, so the toolbar can report both the
+  // visible and the total count and the empty state can tell the two apart.
+  const visibleGames = useMemo(
+    () =>
+      scoreboard.games.filter((game) => {
+        if (filters.foxOnly && !game.isOnFox) return false;
+        if (filters.favoritesOnly && !gameHasFavorite(game, isFavorite)) {
+          return false;
+        }
+        return true;
+      }),
+    [scoreboard.games, filters, isFavorite],
+  );
 
   return (
     <div className={styles.app}>
@@ -25,7 +53,11 @@ export default function App() {
         </div>
 
         <ScoreboardToolbar
-          gameCount={scoreboard.games.length}
+          visibleCount={visibleGames.length}
+          totalCount={scoreboard.games.length}
+          filters={filters}
+          onToggleFilter={toggleFilter}
+          favoriteCount={favoriteCount}
           lastUpdated={scoreboard.lastUpdated}
           isRefreshing={scoreboard.isRefreshing}
           autoRefresh={autoRefresh}
@@ -36,10 +68,12 @@ export default function App() {
 
         <GameList
           status={scoreboard.status}
-          games={scoreboard.games}
+          games={visibleGames}
+          totalGames={scoreboard.games.length}
           error={scoreboard.error}
           leagueLabel={league.label}
           onRetry={scoreboard.refresh}
+          onClearFilters={clearFilters}
         />
       </main>
 

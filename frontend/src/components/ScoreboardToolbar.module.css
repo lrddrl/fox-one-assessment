@@ -7,9 +7,17 @@
   flex-wrap: wrap;
 }
 
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 .count {
   font-size: 13px;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .count strong {

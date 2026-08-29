@@ -8,10 +8,14 @@ import styles from './GameList.module.css';
 
 interface GameListProps {
   status: ScoreboardStatus;
+  /** Games after filtering — exactly what should render. */
   games: Game[];
+  /** Games before filtering, to tell "nothing today" from "filtered to zero". */
+  totalGames: number;
   error: string | null;
   leagueLabel: string;
   onRetry: () => void;
+  onClearFilters: () => void;
 }
 
 const SKELETON_COUNT = 6;
@@ -19,9 +23,11 @@ const SKELETON_COUNT = 6;
 export function GameList({
   status,
   games,
+  totalGames,
   error,
   leagueLabel,
   onRetry,
+  onClearFilters,
 }: GameListProps) {
   if (status === 'loading') {
     return (
@@ -44,7 +50,11 @@ export function GameList({
   if (games.length === 0) {
     return (
       <div className={styles.grid}>
-        <EmptyState league={leagueLabel} />
+        <EmptyState
+          league={leagueLabel}
+          // Only offer "clear filters" when filters are what emptied the list.
+          onClearFilters={totalGames > 0 ? onClearFilters : undefined}
+        />
       </div>
     );
   }
