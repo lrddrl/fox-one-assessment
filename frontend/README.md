@@ -5,11 +5,33 @@ with an AI-written recap / preview for any game.
 
 **Live demo:** https://fox-one-scoreboard.vercel.app
 
-> **Additional feature:** the AI recap. Tap **AI recap** on a card and a
-> serverless function sends that game's data to MiniMax and returns two or three
-> sentences — a preview before kickoff, a live read during the game, a recap
-> after. The app works fully without it (the panel just explains it's not
-> configured).
+## Meeting the brief
+
+| The brief asks for | Where it is |
+|---|---|
+| A new app in React or Vue (latest) | React 19 + Vite 8 + TypeScript |
+| Query a publicly available API | ESPN's public scoreboard API — no key required ([why this one](#why-this-api)) |
+| Display the data in a list | A responsive grid of game cards, one per game, for the selected league |
+| **One additional feature of your choice** *(e.g. state management, CSS, some client-side effect)* | **The AI recap** — see below. The brief's three examples are all exercised too; the table under [Additional feature](#additional-feature) says where. |
+| Push to GitHub | [github.com/lrddrl/fox-one-assessment](https://github.com/lrddrl/fox-one-assessment) |
+
+### Additional feature
+
+**The AI recap.** Tap **AI recap** on a card and a serverless function sends that
+game's data to MiniMax, which returns two or three sentences — a preview before
+kickoff, a live read during the game, a recap after. It turns a box score into
+something a casual fan can read. The app works fully without it (the panel
+explains it isn't configured rather than erroring).
+
+The brief offered *state management, CSS, or some client-side effect* as
+examples of what an additional feature might be. The AI recap is a client-side
+effect end to end, and the other two are exercised as well:
+
+| Example from the brief | In this app |
+|---|---|
+| **State management** | `useScoreboard` — a custom hook owning all async state (games, status, error, `lastUpdated`, `isRefreshing`) with derived loading status and request cancellation. `useTheme` persists to `localStorage`. `GameRecap` keeps a module-level `Map` cache keyed by game id. No state library — deliberately; see [Design decisions](#design-decisions-worth-calling-out). |
+| **CSS** | A token-based design system in `index.css` (colour, spacing, radii, type scales) driving a full dark **and** light theme, with CSS Modules scoped per component. Loading skeletons and the live-game pulse are CSS animations, dropped under `prefers-reduced-motion`. |
+| **Client-side effect** | 30-second polling with an `AbortController` per request; a live "updated 12s ago" ticker; theme persistence; and the lazy, cached, per-card AI fetch. |
 
 ## Stack
 
@@ -38,6 +60,37 @@ npx vercel dev                 # serves the app + /api together
 ```
 
 Other scripts: `npm run build` (type-check + production build), `npm run lint`.
+
+## Why this API
+
+The app reads `site.api.espn.com/apis/site/v2/sports/{sport}/{league}/scoreboard`
+— the JSON endpoint ESPN's own site and apps call. It is **publicly accessible
+without a key or an account**, but ESPN publishes no documentation for it and
+offers no stability guarantee.
+
+Three reasons it won this project:
+
+1. **No key, so this repo runs on first clone.** `npm install && npm run dev`
+   gives you live scores. Every documented, supported sports API I looked at
+   (SportsData.io, API-Sports) requires signing up for a key — which would mean
+   either a reviewer registering for one before they can run this, or me
+   committing my own key. Neither is acceptable for a take-home.
+2. **One source, one response shape, all three FOX leagues.** MLB, NFL, and
+   college football differ only by a path segment, so adding a league is one
+   line in `config/leagues.ts`. MLB's own free API (`statsapi.mlb.com`) is
+   excellent but MLB-only, with no NFL or college-football counterpart — I'd
+   have had to integrate three unrelated APIs to cover the same ground.
+3. **Rich enough for a real scoreboard.** Live status ("Top 5th", "Halftime"),
+   scores, season records, AP rank, venue, and the broadcast network — the last
+   of which is what lets the app badge the games FOX actually carries.
+
+Also considered: **TheSportsDB**, whose free tier shares one public test key, is
+tightly rate-limited, carries community-maintained data, and has patchy live
+scores — too unreliable to demo.
+
+**The trade-off:** an undocumented endpoint can change shape without notice. That
+is a real risk and it is handled deliberately rather than ignored — see the
+first bullet under [Design decisions](#design-decisions-worth-calling-out).
 
 ## How it's put together
 
@@ -70,6 +123,11 @@ Components below are presentational.
   optional; `normalizeEvent` skips a malformed game rather than throwing, so one
   bad record can't blank the board. A production version would put this behind
   our own cached endpoint.
+- **No state-management library.** There are two pieces of UI state
+  (`leagueId`, `autoRefresh`) and one data hook. `useState` plus a custom hook is
+  the entire surface — Redux or Zustand here would be ceremony, and the brief
+  asks to keep it simple. The line I'd cross for one: shared state that several
+  distant components both read *and* write. Nothing in this app does.
 - **Loading state is derived, not stored.** `useScoreboard` compares the
   requested league to the loaded one; if they differ, we're "loading". This
   avoids resetting state inside an effect when you switch leagues.
