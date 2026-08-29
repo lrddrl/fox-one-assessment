@@ -1,0 +1,119 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin: var(--space-5) 0 var(--space-4);
+  flex-wrap: wrap;
+}
+
+.count {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.count strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.updated {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Auto-refresh toggle ---------------------------------------------------- */
+.auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.auto input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.track {
+  width: 34px;
+  height: 20px;
+  padding: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  transition: background 0.15s ease;
+}
+
+.thumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+
+.auto input:checked + .track {
+  background: var(--brand-soft);
+}
+
+.auto input:checked + .track .thumb {
+  transform: translateX(14px);
+  background: var(--brand);
+}
+
+.auto input:focus-visible + .track {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Manual refresh button ------------------------------------------------- */
+.refresh {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.refresh:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.refresh:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,59 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.upcoming {
+  background: var(--surface-3);
+  color: var(--text-secondary);
+}
+
+.final {
+  background: var(--surface-3);
+  color: var(--text-muted);
+}
+
+.live {
+  background: var(--live-soft);
+  color: var(--live);
+}
+
+.liveLabel {
+  font-weight: 700;
+}
+
+.detail {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--live);
+  opacity: 0.85;
+}
+
+.pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--live);
+  box-shadow: 0 0 0 0 var(--live);
+  animation: pulse 1.8s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 90, 82, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(255, 90, 82, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 90, 82, 0);
+  }
+}

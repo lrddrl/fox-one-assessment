@@ -1,0 +1,156 @@
+/* ============================================================
+   Design tokens + global base styles
+
+   The app is dark-first (a broadcast-scoreboard look). Light mode
+   is a full token override applied via [data-theme="light"] on
+   <html>; the initial value is resolved in hooks/useTheme.ts from
+   localStorage, falling back to the OS preference.
+   ============================================================ */
+
+:root {
+  /* Brand */
+  --brand: #3d7bff;
+  --brand-strong: #2b62e0;
+  --brand-contrast: #ffffff;
+  --brand-soft: rgba(61, 123, 255, 0.14);
+
+  /* Semantic accents */
+  --live: #ff5a52;
+  --live-soft: rgba(255, 90, 82, 0.16);
+  --win: #34d17e;
+  --ai: #9b7cff;
+  --ai-soft: rgba(155, 124, 255, 0.16);
+
+  /* Surfaces / neutrals — dark (default) */
+  --bg: #080b13;
+  --bg-glow: #14203c;
+  --bg-deep: #05070d;
+  --surface: #121724;
+  --surface-2: #1a2132;
+  --surface-3: #232d42;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #f5f7fb;
+  --text-secondary: #a9b4c8;
+  --text-muted: #6d7890;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.38);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.52);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Typography */
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Barlow Semi Condensed', 'Inter', system-ui, sans-serif;
+
+  --content-width: 1120px;
+}
+
+:root[data-theme='light'] {
+  --brand: #1e5bff;
+  --brand-strong: #1442c8;
+  --brand-contrast: #ffffff;
+  --brand-soft: rgba(30, 91, 255, 0.1);
+
+  --live: #e5342c;
+  --live-soft: rgba(229, 52, 44, 0.12);
+  --win: #16a34a;
+  --ai: #7c3aed;
+  --ai-soft: rgba(124, 58, 237, 0.1);
+
+  --bg: #eef1f7;
+  --bg-glow: #dfe7fb;
+  --bg-deep: #e3e8f1;
+  --surface: #ffffff;
+  --surface-2: #f3f5fa;
+  --surface-3: #e9edf5;
+  --border: rgba(16, 24, 40, 0.1);
+  --border-strong: rgba(16, 24, 40, 0.2);
+  --text: #0e1729;
+  --text-secondary: #47536a;
+  --text-muted: #7a8598;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.08);
+  --shadow-md: 0 10px 28px rgba(16, 24, 40, 0.1);
+  --shadow-lg: 0 24px 60px rgba(16, 24, 40, 0.16);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html {
+  color-scheme: dark;
+}
+html[data-theme='light'] {
+  color-scheme: light;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100dvh;
+  background:
+    radial-gradient(900px 500px at 50% -8%, var(--bg-glow), transparent 70%),
+    linear-gradient(180deg, var(--bg-deep), var(--bg) 30%);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+a {
+  color: var(--brand);
+}
+
+img {
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

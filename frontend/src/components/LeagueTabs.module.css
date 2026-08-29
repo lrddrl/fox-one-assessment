@@ -1,0 +1,50 @@
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.tab {
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.active {
+  background: var(--brand);
+  color: var(--brand-contrast);
+}
+
+.active:hover {
+  color: var(--brand-contrast);
+}
+
+.short {
+  display: none;
+}
+
+@media (max-width: 460px) {
+  .full {
+    display: none;
+  }
+  .short {
+    display: inline;
+  }
+  .tab {
+    padding: 8px 16px;
+  }
+}
