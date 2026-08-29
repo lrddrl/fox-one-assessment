@@ -3,6 +3,8 @@
 A live scoreboard for the leagues FOX broadcasts (MLB, NFL, college football),
 with an AI-written recap / preview for any game.
 
+**Live demo:** https://fox-one-scoreboard.vercel.app
+
 > **Additional feature:** the AI recap. Tap **AI recap** on a card and a
 > serverless function sends that game's data to MiniMax and returns two or three
 > sentences — a preview before kickoff, a live read during the game, a recap

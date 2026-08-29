@@ -4,7 +4,7 @@ Two parts, one repository.
 
 | | |
 |---|---|
-| **[`frontend/`](./frontend)** | **Part 1** — a React 19 + Vite + TypeScript app: a live sports scoreboard for the leagues FOX broadcasts (MLB, NFL, college football), with an AI-written game recap / preview powered by MiniMax behind a serverless proxy. |
+| **[`frontend/`](./frontend)** | **Part 1** — a React 19 + Vite + TypeScript app: a live sports scoreboard for the leagues FOX broadcasts (MLB, NFL, college football), with an AI-written game recap / preview powered by MiniMax behind a serverless proxy. **Live: https://fox-one-scoreboard.vercel.app** |
 | **[`python/`](./python)** | **Part 2** — five standard-library Python exercises with a 51-test `unittest` suite. |
 
 Each part has its own README with the design decisions and trade-offs:
@@ -34,4 +34,4 @@ that feature degrading gracefully; `npx vercel dev` (with a `MINIMAX_API_KEY` in
 ## Deployment
 
 The frontend deploys to Vercel from `main` (Root Directory `frontend`, Vite
-preset). Live demo: _TODO — add after first deploy_.
+preset). Live demo: **https://fox-one-scoreboard.vercel.app**
