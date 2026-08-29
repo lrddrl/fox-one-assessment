@@ -12,7 +12,12 @@
  * MiniMax's domestic and international hosts and survives model renames):
  *   MINIMAX_API_KEY   (required)  - your key
  *   MINIMAX_BASE_URL  (optional)  - default https://api.minimaxi.chat/v1
+ *                                   domestic: https://api.minimax.chat/v1
+ *   MINIMAX_CHAT_PATH (optional)  - default /text/chatcompletion_v2
+ *                                   set to /chat/completions for an
+ *                                   OpenAI-compatible endpoint
  *   MINIMAX_MODEL     (optional)  - default MiniMax-Text-01
+ *                                   domestic often: abab6.5s-chat
  *   MINIMAX_GROUP_ID  (optional)  - only if your account requires it
  *
  * If MINIMAX_API_KEY is missing we return 501 so the UI can degrade to
@@ -23,6 +28,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const API_KEY = process.env.MINIMAX_API_KEY;
 const BASE_URL = process.env.MINIMAX_BASE_URL ?? 'https://api.minimaxi.chat/v1';
+const CHAT_PATH = process.env.MINIMAX_CHAT_PATH ?? '/text/chatcompletion_v2';
 const MODEL = process.env.MINIMAX_MODEL ?? 'MiniMax-Text-01';
 const GROUP_ID = process.env.MINIMAX_GROUP_ID;
 
@@ -73,7 +79,7 @@ export default async function handler(
 
   try {
     const upstream = await fetch(
-      `${BASE_URL}/text/chatcompletion_v2${GROUP_ID ? `?GroupId=${GROUP_ID}` : ''}`,
+      `${BASE_URL}${CHAT_PATH}${GROUP_ID ? `?GroupId=${GROUP_ID}` : ''}`,
       {
         method: 'POST',
         headers: {

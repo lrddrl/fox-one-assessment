@@ -89,12 +89,13 @@ Components below are presentational.
 Configured entirely through environment variables so the same code works for
 MiniMax's domestic and international hosts:
 
-| Variable | Required | Default |
-|---|---|---|
-| `MINIMAX_API_KEY` | yes | — |
-| `MINIMAX_BASE_URL` | no | `https://api.minimaxi.chat/v1` |
-| `MINIMAX_MODEL` | no | `MiniMax-Text-01` |
-| `MINIMAX_GROUP_ID` | no | — |
+| Variable | Required | Default | Notes |
+|---|---|---|---|
+| `MINIMAX_API_KEY` | yes | — | |
+| `MINIMAX_BASE_URL` | no | `https://api.minimaxi.chat/v1` | domestic: `https://api.minimax.chat/v1` |
+| `MINIMAX_CHAT_PATH` | no | `/text/chatcompletion_v2` | or `/chat/completions` for an OpenAI-compatible endpoint |
+| `MINIMAX_MODEL` | no | `MiniMax-Text-01` | domestic often `abab6.5s-chat` |
+| `MINIMAX_GROUP_ID` | no | — | only if your account requires it |
 
 The prompt forbids betting advice, winner predictions, and invented stats, and
 asks for tense to match the game state. Responses are edge-cached for 5 minutes.
