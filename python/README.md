@@ -100,18 +100,27 @@ object, not justified by this interface.
 
 ### Task 4 — Fibonacci
 
-> ⚠️ The broken snippet was not included in the assessment material. The
-> write-up targets the most common broken form (`if n <= 2: return 1`); it will
-> be aligned exactly once the original is available. The corrected
-> implementations do not change.
+> The broken snippet was not included in the assessment material (asked the
+> recruiter, no reply). Working from the most representative form of this
+> exercise:
+>
+> ```python
+> def fib(n):
+>     if n <= 1:
+>         return n
+>     return fib(n - 1) + fib(n - 1)
+> ```
 
-**The usual bug.** `if n <= 2: return 1` makes `F(0) = 1` (should be 0) — an
-off-by-one across the whole sequence — and the two-way recursion is O(2ⁿ), so
-`F(40)` is ~1.6 billion calls and large `n` also busts Python's recursion
-limit.
+**The bug.** The second recursive call should be `fib(n - 2)`. As written,
+`fib(n) == 2 * fib(n - 1) == 2 ** (n - 1)` for `n ≥ 1` — a plausible-looking but
+wrong sequence (`fib(5)` → 16, not 5). The base cases are fine, which is what
+makes the typo easy to miss. Secondary issues that survive the fix: O(2ⁿ)
+blow-up, `RecursionError` for large `n`, and unguarded negative input.
+`fib_broken` in the module keeps the original verbatim so the tests can pin the
+bug down.
 
-**Fix.** Correct the base cases (`F(0)=0`, `F(1)=1`, reject `n < 0`) and
-compute each number once.
+**Fix.** Correct the recursive call, reject `n < 0`, and compute each number
+once (iterative / memoized).
 
 | Version | Time | Space | When to use |
 |---|---|---|---|

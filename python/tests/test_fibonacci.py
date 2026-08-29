@@ -7,13 +7,37 @@ O(2**n).
 
 import unittest
 
-from fibonacci import fib_iterative, fib_lru, fib_memoized, fib_recursive
+from fibonacci import (
+    fib_broken,
+    fib_iterative,
+    fib_lru,
+    fib_memoized,
+    fib_recursive,
+)
 
 # F(0..10) - the sequence every implementation must reproduce.
 EXPECTED = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
 
 ALL_IMPLEMENTATIONS = (fib_recursive, fib_iterative, fib_memoized, fib_lru)
 FAST_IMPLEMENTATIONS = (fib_iterative, fib_memoized, fib_lru)
+
+
+class BrokenFibonacciTests(unittest.TestCase):
+    """Pin down exactly how the original is wrong, so the fix is verifiable."""
+
+    def test_base_cases_are_actually_fine(self) -> None:
+        # The bug is NOT in the base cases - that is what makes it easy to miss.
+        self.assertEqual(fib_broken(0), 0)
+        self.assertEqual(fib_broken(1), 1)
+
+    def test_recursive_step_typo_yields_powers_of_two(self) -> None:
+        # fib(n-1) + fib(n-1) == 2 * fib(n-1) == 2 ** (n - 1) for n >= 1.
+        for n in range(1, 12):
+            self.assertEqual(fib_broken(n), 2 ** (n - 1))
+
+    def test_it_disagrees_with_the_real_sequence(self) -> None:
+        self.assertNotEqual(fib_broken(5), 5)   # returns 16
+        self.assertNotEqual(fib_broken(10), 55)  # returns 512
 
 
 class FibonacciTests(unittest.TestCase):
