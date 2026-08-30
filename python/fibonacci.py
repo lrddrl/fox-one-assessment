@@ -1,81 +1,136 @@
 """Task 4 - Debugging & refactoring: the Fibonacci function.
 
-The broken function
-------------------
+The task: write a simple Fibonacci function, introduce a bug or design issue on
+purpose, then identify it, explain it, fix it, and provide iterative and
+memoized versions with a comparison.
+
+THE FUNCTION I WROTE, WITH THE FLAW IN IT
+-----------------------------------------
     def fib(n):
         if n <= 1:
             return n
         return fib(n - 1) + fib(n - 1)
 
-What is wrong
-------------
-1. **The bug: a typo in the recursive step.** The second call should be
-   ``fib(n - 2)``, not ``fib(n - 1)``. As written, ``fib(n) == 2 * fib(n - 1)``,
-   so for ``n >= 1`` the function returns ``2 ** (n - 1)`` - a *plausible-looking*
-   but wrong sequence: ``fib(5)`` gives 16 instead of 5, ``fib(10)`` gives 512
-   instead of 55. The base cases (``if n <= 1: return n``) are actually fine -
-   they correctly seed F(0)=0 and F(1)=1 - which is what makes the typo easy to
-   miss: the function runs and returns numbers.
+It has both kinds of flaw the task mentions - a bug *and* a design issue.
 
-2. **Even once the typo is fixed, the shape is still bad.** Two-way recursion
-   with no memoisation is O(2**n): ``fib(40)`` is ~1.6e9 calls (seconds to
-   minutes), and the call depth also hits Python's default recursion limit
-   (~1000), so ``fib(2000)`` raises ``RecursionError`` regardless of time.
+Why I chose this particular bug
+-------------------------------
+A crash is not interesting to debug: you see the traceback and you know where
+to look. I wanted the failure mode that actually costs teams time - code that
+**runs, returns numbers, and is wrong**. This one does:
 
-3. **Negative input is unguarded.** ``fib(-1)`` recurses toward more negative
-   numbers until it hits the recursion limit. It should be rejected.
+* it never raises,
+* the values look plausible (they grow, they are positive integers),
+* and the base cases are *correct*, so the obvious place to look is clean.
 
-The fix
--------
-Correct the recursive call to ``fib(n - 1) + fib(n - 2)``, reject ``n < 0``, and
-- because the exponential blow-up remains - change the algorithm so each
-Fibonacci number is computed once. Three ways to do that below.
+That is a realistic copy-paste slip, and it is the kind of defect only a test
+against known values catches. Which is why `tests/test_fibonacci.py` keeps the
+broken version and asserts exactly how it is wrong.
 
-Trade-offs of the corrected implementations
--------------------------------------------
-| version        | time    | extra space        | when to use                          |
-|----------------|---------|--------------------|--------------------------------------|
-| fib_recursive  | O(2**n) | O(n) call stack    | reference only - it *is* the fixed   |
-|                |         |                    | recursive version, kept to show the  |
-|                |         |                    | one-character fix and as a spec      |
-| fib_iterative  | O(n)    | O(1)               | DEFAULT - fastest, no recursion limit |
-| fib_memoized   | O(n)    | O(n) cache + stack | reads like the definition; costs      |
-|                |         |                    | memory and hits the recursion limit  |
-|                |         |                    | for very large n                     |
-| fib_lru        | O(n)    | O(n) cache         | same idea via the stdlib             |
-|                |         |                    | (functools.lru_cache); cache persists |
-|                |         |                    | between calls                        |
+1. THE BUG: a typo in the recursive step
+----------------------------------------
+The second call should be ``fib(n - 2)``, not ``fib(n - 1)``.
 
-Why they behave differently
+As written, ``fib(n) == 2 * fib(n - 1)``, so the function returns
+``2 ** (n - 1)`` for ``n >= 1``:
+
+    n          0  1  2  3  4   5   6   7    8    9
+    broken     0  1  2  4  8  16  32  64  128  256
+    correct    0  1  1  2  3   5   8  13   21   34
+
+``fib(5)`` gives 16 instead of 5; ``fib(10)`` gives 512 instead of 55. Note the
+first two values agree - a smoke test of only F(0) and F(1) would pass.
+
+2. THE DESIGN ISSUE: exponential recursion, and no input guard
+--------------------------------------------------------------
+Fixing the typo leaves the shape wrong. Two-way recursion with no memoisation
+recomputes the same subproblems over and over: O(2**n). ``fib(40)`` is roughly
+1.6 billion calls, and deep n also exceeds CPython's default recursion limit
+(~1000 frames) and raises ``RecursionError``.
+
+Negative input is also unguarded: ``fib(-1)`` recurses toward -inf until the
+recursion limit trips, instead of failing with a clear message.
+
+3. THE FIX
+----------
+Correct the recursive call, reject ``n < 0``, and - because the exponential
+blow-up survives the typo fix - compute each value only once. Three correct
+implementations follow, plus the fixed recursion kept as a reference.
+
+EDGE CASES HANDLED
+------------------
+* ``n = 0`` -> 0 and ``n = 1`` -> 1 (the seeds; easy to get off by one)
+* ``n < 0``  -> ``ValueError``, not silent nonsense or a ``RecursionError``
+* very large n -> ``fib_iterative`` has no recursion ceiling; Python's int is
+  arbitrary precision, so F(10_000) is exact, not an overflow
+* ``fib_lru`` caches across calls, so tests must ``cache_clear()`` between runs
+
+TRADE-OFFS
+----------
+| version        | time    | extra space     | readability                     |
+|----------------|---------|-----------------|---------------------------------|
+| fib_recursive  | O(2**n) | O(n) call stack | best - it *is* the definition   |
+| fib_iterative  | O(n)    | O(1)            | good, but the tuple swap needs  |
+|                |         |                 | a moment; it no longer looks    |
+|                |         |                 | like the maths                  |
+| fib_memoized   | O(n)    | O(n) cache      | fair - the `_cache` parameter   |
+|                |         | + O(n) stack    | leaks plumbing into the API     |
+| fib_lru        | O(n)    | O(n) cache      | best of the fast three - one    |
+|                |         |                 | decorator, no plumbing          |
+
+Two different winners, which is the interesting part: **`fib_iterative` is the
+best performer** (constant space, no recursion limit, no cache to invalidate)
+while **`fib_lru` is the best readability-per-speed** - it keeps the shape of
+the definition and gets O(n) for one line. I default to `fib_iterative` because
+this function has one job and O(1) space is free here; on a messier recurrence
+where the recursive form carried real meaning, I would take `lru_cache`.
+
+WHY THEY BEHAVE DIFFERENTLY
 ---------------------------
-The naive (fixed) recursion recomputes the same subproblems again and again -
-fib(5) computes fib(3) twice, fib(2) three times, and so on, which is where the
-O(2**n) comes from. Memoisation stores each result the first time it is
-computed, collapsing the call tree to O(n) distinct subproblems. The iterative
-version sidesteps recursion altogether: it builds the sequence bottom-up keeping
-only the last two numbers, so it needs neither a cache nor stack frames.
+The naive recursion recomputes subproblems exponentially - ``fib(5)`` evaluates
+``fib(3)`` twice and ``fib(2)`` three times. Memoisation stores each result the
+first time it is produced, so the call tree collapses to the O(n) *distinct*
+subproblems. The iterative version avoids recursion entirely: it walks upward
+holding only the last two values, so there is neither a cache nor a stack to
+grow.
+
+ALTERNATIVE APPROACHES I CONSIDERED
+-----------------------------------
+* **A generator** (`yield` the sequence) - the better API when the caller wants
+  a *run* of values rather than one; wrong shape for a single ``fib(n)``.
+* **Matrix exponentiation** or **fast doubling** - O(log n) by squaring
+  [[1,1],[1,0]]. Genuinely faster for huge n, and the right answer if this were
+  a hot path. Not justified here: it is several times the code and needs its own
+  explanation, and O(n) on Python ints is already instant at any n a caller of
+  this function will pass.
+* **Binet's closed form** (phi**n / sqrt(5)) - O(1) and tempting, but it uses
+  floats: it silently goes wrong past F(70) or so as the mantissa runs out. An
+  exactness bug is a bad trade for a constant factor.
 """
 
 from functools import lru_cache
 
 
 def fib_broken(n: int) -> int:
-    """The original buggy function, kept verbatim so the bug is demonstrable.
+    """The flawed version, kept verbatim so the defect is demonstrable.
 
-    ``fib_broken(n) == 2 ** (n - 1)`` for n >= 1 - NOT the Fibonacci sequence.
-    See the module docstring. Do not use; ``fib_iterative`` is the answer.
+    Returns ``2 ** (n - 1)`` for n >= 1 - not the Fibonacci sequence. See the
+    module docstring. Kept only as the subject of the debugging exercise;
+    ``fib_iterative`` is the answer.
     """
     if n <= 1:
         return n
-    return fib_broken(n - 1) + fib_broken(n - 1)  # bug: 2nd call should be n - 2
+    # THE BUG: the second call should be fib_broken(n - 2).
+    return fib_broken(n - 1) + fib_broken(n - 1)
 
 
 def fib_recursive(n: int) -> int:
-    """The bug fixed in place: ``fib(n - 1) + fib(n - 2)``, plus an ``n < 0``
-    guard. Correct, but still O(2**n) - reference only.
+    """The bug fixed in place, plus an input guard. Still O(2**n).
 
-    Behaviour: fine up to ~n=30, painfully slow by n=40, ``RecursionError``
-    once n exceeds the interpreter's recursion limit.
+    Kept as a reference: it reads exactly like the mathematical definition,
+    which makes it a good specification to check the fast versions against for
+    small n. Fine up to about n=30, painfully slow by n=40, and ``RecursionError``
+    once n passes the interpreter's recursion limit.
     """
     if n < 0:
         raise ValueError("Fibonacci is undefined for negative n")
@@ -87,8 +142,8 @@ def fib_recursive(n: int) -> int:
 def fib_iterative(n: int) -> int:
     """Bottom-up iteration. O(n) time, O(1) space - the version to prefer.
 
-    Walk from the base cases upward, keeping only the previous two values.
-    No recursion, so no recursion-limit ceiling and no per-call overhead.
+    Walks up from the base cases holding only the previous two values. No
+    recursion, so no recursion-limit ceiling and no per-call overhead.
     """
     if n < 0:
         raise ValueError("Fibonacci is undefined for negative n")
@@ -102,9 +157,13 @@ def fib_memoized(n: int, _cache: dict[int, int] | None = None) -> int:
     """Top-down recursion with a cache. O(n) time, O(n) space.
 
     ``_cache`` defaults to ``None``, not ``{}``: a mutable default argument is
-    created once at function-definition time and would be shared (and grow)
-    across every call - a classic Python footgun. Instead we create a fresh
-    dict on the top-level call and thread it through the recursion.
+    created once at function-definition time and would then be shared - and
+    grow - across every call, a classic Python footgun. Instead a fresh dict is
+    created on the top-level call and threaded through the recursion.
+
+    The leading underscore marks ``_cache`` as an implementation detail callers
+    should not pass. That it appears in the signature at all is this version's
+    main readability cost, and the reason ``fib_lru`` below is usually nicer.
     """
     if n < 0:
         raise ValueError("Fibonacci is undefined for negative n")
@@ -121,10 +180,10 @@ def fib_memoized(n: int, _cache: dict[int, int] | None = None) -> int:
 def fib_lru(n: int) -> int:
     """Memoisation the idiomatic stdlib way: ``functools.lru_cache``.
 
-    Same complexity as ``fib_memoized`` with less code. The cache lives on the
-    function object and persists between calls for the process lifetime - a
-    feature for repeated use, something to reset in tests via
-    ``fib_lru.cache_clear()``.
+    Same complexity as ``fib_memoized`` with none of the plumbing - the body is
+    just the definition again. The cache lives on the function object and
+    persists for the process, which is a feature for repeated use and something
+    tests must reset with ``fib_lru.cache_clear()``.
     """
     if n < 0:
         raise ValueError("Fibonacci is undefined for negative n")
@@ -134,6 +193,6 @@ def fib_lru(n: int) -> int:
 
 
 if __name__ == "__main__":
-    print("broken: ", [fib_broken(i) for i in range(10)])   # 0,1,2,4,8,16,32,64,128,256
-    print("fixed:  ", [fib_iterative(i) for i in range(10)])  # 0,1,1,2,3,5,8,13,21,34
-    print("F(100): ", fib_iterative(100))  # 354224848179261915075
+    print("broken: ", [fib_broken(i) for i in range(10)])
+    print("fixed:  ", [fib_iterative(i) for i in range(10)])
+    print("F(100): ", fib_iterative(100))

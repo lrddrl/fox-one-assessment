@@ -23,7 +23,11 @@ FAST_IMPLEMENTATIONS = (fib_iterative, fib_memoized, fib_lru)
 
 
 class BrokenFibonacciTests(unittest.TestCase):
-    """Pin down exactly how the original is wrong, so the fix is verifiable."""
+    """Pin down exactly how the deliberately-flawed version is wrong.
+
+    Writing these first is the point of the exercise: the bug never raises and
+    the numbers look plausible, so only a test against known values catches it.
+    """
 
     def test_base_cases_are_actually_fine(self) -> None:
         # The bug is NOT in the base cases - that is what makes it easy to miss.

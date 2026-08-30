@@ -100,38 +100,66 @@ object, not justified by this interface.
 
 ### Task 4 — Fibonacci
 
-> The broken snippet was not included in the assessment material (asked the
-> recruiter, no reply). Working from the most representative form of this
-> exercise:
->
-> ```python
-> def fib(n):
->     if n <= 1:
->         return n
->     return fib(n - 1) + fib(n - 1)
-> ```
+The task is to write a Fibonacci function, **introduce a flaw on purpose**, then
+diagnose and fix it. Mine has both kinds the brief mentions — a bug *and* a
+design issue:
 
-**The bug.** The second recursive call should be `fib(n - 2)`. As written,
-`fib(n) == 2 * fib(n - 1) == 2 ** (n - 1)` for `n ≥ 1` — a plausible-looking but
-wrong sequence (`fib(5)` → 16, not 5). The base cases are fine, which is what
-makes the typo easy to miss. Secondary issues that survive the fix: O(2ⁿ)
-blow-up, `RecursionError` for large `n`, and unguarded negative input.
-`fib_broken` in the module keeps the original verbatim so the tests can pin the
-bug down.
+```python
+def fib(n):
+    if n <= 1:
+        return n
+    return fib(n - 1) + fib(n - 1)   # bug: should be fib(n - 2)
+```
+
+**Why this bug.** A crash is uninteresting to debug — the traceback tells you
+where to look. I wanted the failure mode that actually costs teams time: code
+that **runs, returns numbers, and is wrong**. This never raises, the values look
+plausible, and the base cases are *correct*, so the obvious place to look is
+clean. Only a test against known values catches it — which is why
+`fib_broken` stays in the module and the suite asserts exactly how it fails.
+
+**The bug.** `fib(n) == 2 × fib(n-1) == 2ⁿ⁻¹` for `n ≥ 1`. `fib(5)` → 16, not 5.
+F(0) and F(1) still agree, so a smoke test of just those two would pass.
+
+**The design issue.** Fixing the typo leaves the shape wrong: two-way recursion
+with no memoization is O(2ⁿ), and deep `n` trips `RecursionError`. Negative
+input is unguarded too.
 
 **Fix.** Correct the recursive call, reject `n < 0`, and compute each number
 once (iterative / memoized).
 
-| Version | Time | Space | When to use |
+**Alternatives considered.** A generator (right shape for a *run* of values,
+wrong for one `fib(n)`); matrix exponentiation / fast doubling (O(log n), worth
+it only if this were a hot path); Binet's closed form (O(1), but float precision
+makes it silently wrong past ~F(70) — an exactness bug is a bad trade for a
+constant factor).
+
+| Version | Time | Space | Readability |
 |---|---|---|---|
-| `fib_recursive` | O(2ⁿ) | O(n) stack | reference / teaching only |
-| `fib_iterative` | O(n) | O(1) | **default** — fastest, no recursion limit |
-| `fib_memoized` | O(n) | O(n) cache + stack | reads like the definition; memory + depth cost |
-| `fib_lru` | O(n) | O(n) cache | same idea via `functools.lru_cache`; cache persists |
+| `fib_recursive` | O(2ⁿ) | O(n) stack | best — it *is* the definition |
+| `fib_iterative` | O(n) | O(1) | good, but the tuple swap needs a moment; no longer looks like the maths |
+| `fib_memoized` | O(n) | O(n) cache + O(n) stack | fair — the `_cache` parameter leaks plumbing into the signature |
+| `fib_lru` | O(n) | O(n) cache | best of the fast three — one decorator, no plumbing |
+
+**Two different winners, which is the interesting part.** `fib_iterative` is the
+best *performer* (constant space, no recursion ceiling, no cache to invalidate);
+`fib_lru` is the best *readability-per-speed* — it keeps the shape of the
+definition and buys O(n) for one line. I default to `fib_iterative` because this
+function has one job and O(1) space is free here; on a messier recurrence where
+the recursive form carried real meaning, I'd take `lru_cache`.
 
 **Why they differ.** Naive recursion recomputes the same subproblems
-exponentially; memoisation stores each once (O(n) distinct subproblems); the
-iterative version avoids recursion entirely, keeping only the last two values.
+exponentially — `fib(5)` evaluates `fib(3)` twice and `fib(2)` three times.
+Memoization stores each result the first time, collapsing the call tree to the
+O(n) *distinct* subproblems. The iterative version avoids recursion entirely,
+holding only the last two values — so there's neither a cache nor a stack to
+grow.
+
+**Edge cases.** `n = 0` → 0 and `n = 1` → 1 (the seeds, easy to get off by one);
+`n < 0` → `ValueError` rather than silent nonsense or a `RecursionError`; very
+large `n` is exact, not an overflow, because Python ints are arbitrary
+precision; `fib_lru`'s cache persists across calls, so tests `cache_clear()`
+between runs.
 
 ### Task 5 — `group_anagrams(words) -> list[list[str]]`
 
