@@ -23,13 +23,13 @@ kickoff, a live read during the game, a recap after. It turns a box score into
 something a casual fan can read. The app works fully without it (the panel
 explains it isn't configured rather than erroring).
 
-The brief offered *state management, CSS, or some client-side effect* as
-examples of what an additional feature might be. The AI recap is a client-side
-effect end to end, and the other two are exercised as well:
+The brief lists *state management, CSS, or some client-side effect* as examples
+of what an additional feature might be. The AI recap is the feature — and all
+three of those example categories are also exercised across the app:
 
-| Example from the brief | In this app |
+| Example from the brief | Where it shows up |
 |---|---|
-| **State management** | `useScoreboard` — a custom hook owning all async state (games, status, error, `lastUpdated`, `isRefreshing`) with a *derived* loading status and per-request cancellation; `useTheme` (persisted); and a module-level `Map` in `GameRecap` caching recaps by game id. No state-management library — the state doesn't warrant one; see [Design decisions](#design-decisions-worth-calling-out). |
+| **State management** | `useScoreboard` — a custom hook owning all async state (games, status, error, `lastUpdated`, `isRefreshing`) with a *derived* loading status and per-request cancellation; `useTheme` (persisted to `localStorage`); a module-level `Map` in `GameRecap` caching recaps by game id. No state-management library — the state doesn't warrant one; see [Design decisions](#design-decisions-worth-calling-out). |
 | **CSS** | A token-based design system in `index.css` (colour, spacing, radii, type scales) driving a full dark **and** light theme, with CSS Modules scoped per component. Loading skeletons and the live-game pulse are CSS animations, dropped under `prefers-reduced-motion`. |
 | **Client-side effect** | 30-second polling with an `AbortController` per request; a live "updated 12s ago" ticker; theme persistence; and the lazy, cached, per-card AI fetch. |
 
