@@ -1,23 +1,16 @@
 import { useState } from 'react';
 
-import { teamKey, useFavorites } from '../state/favorites';
 import type { GameState, TeamSide } from '../types';
-import { FavoriteButton } from './FavoriteButton';
 import styles from './TeamRow.module.css';
 
 interface TeamRowProps {
   team: TeamSide;
-  /** Which league this team is in — favorites are keyed per league. */
-  leagueLabel: string;
   gameState: GameState;
   /** Dim the losing side once a game is final. */
   dim: boolean;
 }
 
-export function TeamRow({ team, leagueLabel, gameState, dim }: TeamRowProps) {
-  const { isFavorite, toggle } = useFavorites();
-  const key = teamKey(leagueLabel, team.id);
-
+export function TeamRow({ team, gameState, dim }: TeamRowProps) {
   return (
     <div className={`${styles.row} ${dim ? styles.dim : ''}`}>
       <TeamLogo url={team.logoUrl} name={team.displayName} />
@@ -47,12 +40,6 @@ export function TeamRow({ team, leagueLabel, gameState, dim }: TeamRowProps) {
       ) : (
         <span className={styles.winnerSpacer} aria-hidden="true" />
       )}
-
-      <FavoriteButton
-        active={isFavorite(key)}
-        teamName={team.displayName}
-        onToggle={() => toggle(key)}
-      />
     </div>
   );
 }

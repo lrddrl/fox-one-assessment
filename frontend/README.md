@@ -29,15 +29,9 @@ effect end to end, and the other two are exercised as well:
 
 | Example from the brief | In this app |
 |---|---|
-| **State management** | **Favorite teams** — star any team and it persists to `localStorage`; a React **Context** supplies it, because the stars are three levels below `App` and both read and write it. Plus `useScoreboard`, a custom hook owning all async state (games, status, error, `lastUpdated`, `isRefreshing`) with derived loading status and request cancellation; `useTheme`; and a module-level `Map` in `GameRecap` caching recaps by game id. No state-management *library* — deliberately; see [Design decisions](#design-decisions-worth-calling-out). |
+| **State management** | `useScoreboard` — a custom hook owning all async state (games, status, error, `lastUpdated`, `isRefreshing`) with a *derived* loading status and per-request cancellation; `useTheme` (persisted); and a module-level `Map` in `GameRecap` caching recaps by game id. No state-management library — the state doesn't warrant one; see [Design decisions](#design-decisions-worth-calling-out). |
 | **CSS** | A token-based design system in `index.css` (colour, spacing, radii, type scales) driving a full dark **and** light theme, with CSS Modules scoped per component. Loading skeletons and the live-game pulse are CSS animations, dropped under `prefers-reduced-motion`. |
-| **Client-side effect** | 30-second polling with an `AbortController` per request; **client-side filtering** (*On FOX* / *Favorites* chips, combinable, with a dedicated "filtered to nothing" empty state); a live "updated 12s ago" ticker; theme and favorites persistence; and the lazy, cached, per-card AI fetch. |
-
-**Filtering** is deliberately chips, not a search box: with 15–25 games on one
-screen there is nothing to search *for*, but "only the games FOX is carrying"
-and "only my teams" are questions a viewer actually has. `isOnFox` is already
-computed during normalisation, so the FOX filter is a predicate over data the
-app already holds — no extra request.
+| **Client-side effect** | 30-second polling with an `AbortController` per request; a live "updated 12s ago" ticker; theme persistence; and the lazy, cached, per-card AI fetch. |
 
 ## Stack
 
@@ -112,21 +106,15 @@ src/
     useScoreboard.ts    fetch + polling + cancellation + derived status
     useRelativeTime.ts  live-updating "updated 12s ago"
     useTheme.ts         dark/light, persisted, system-aware
-  state/
-    favorites.ts            context, key helpers, useFavorites()
-    FavoritesProvider.tsx   the provider + localStorage persistence
   components/           presentational; one folder-level concern each
 api/
   recap.ts              serverless MiniMax proxy
 ```
 
-**Data flow:** `App` holds the UI state (`leagueId`, `autoRefresh`, `filters`)
-and passes the first two to `useScoreboard`, which owns everything async and
-returns `{ games, status, error, lastUpdated, isRefreshing, refresh }`. `App`
-then filters that list before handing it to `GameList`, so the toolbar can
-report "6 of 15" and the empty state can tell "no games today" from "your
-filters hid them all". Favorites come from Context rather than props. Everything
-below `App` is presentational.
+**Data flow:** `App` holds the two pieces of UI state (`leagueId`,
+`autoRefresh`) and passes them to `useScoreboard`, which owns everything async
+and returns `{ games, status, error, lastUpdated, isRefreshing, refresh }`.
+Everything below `App` is presentational — given props, renders markup.
 
 ## Design decisions worth calling out
 
@@ -135,12 +123,11 @@ below `App` is presentational.
   optional; `normalizeEvent` skips a malformed game rather than throwing, so one
   bad record can't blank the board. A production version would put this behind
   our own cached endpoint.
-- **No state-management library — Context is enough.** Local UI state
-  (`leagueId`, `autoRefresh`, `filters`) lives in `App`; async state lives in
-  `useScoreboard`. Favorites are the one piece of state that genuinely needed
-  more, because a star on every `TeamRow` sits three levels below `App` and
-  both reads and writes it — that's the case Context exists for, and it's built
-  into React. Redux or Zustand on top would be ceremony for a `Set` of strings.
+- **No state-management library.** There are two pieces of UI state
+  (`leagueId`, `autoRefresh`) and one data hook. `useState` plus a custom hook
+  is the entire surface — Redux or Zustand here would be ceremony, and the brief
+  asks to keep it simple. The line I'd cross for one: shared state that several
+  distant components both read *and* write. Nothing in this app does.
 - **Loading state is derived, not stored.** `useScoreboard` compares the
   requested league to the loaded one; if they differ, we're "loading". This
   avoids resetting state inside an effect when you switch leagues.
@@ -188,7 +175,7 @@ The repo is a monorepo; this app lives in `frontend/`.
 ## With more time
 
 - A thin cached backend proxy for ESPN instead of calling it from the browser.
-- Sort games involving a favorite team to the top, not just filter by them.
 - Stream the recap token-by-token instead of waiting for the full response.
+- Smarter polling: pause on a hidden tab, back off on repeated failure.
 - A small test suite (Vitest + Testing Library) around `lib/espn.ts`
   normalisation and `useScoreboard` state transitions.

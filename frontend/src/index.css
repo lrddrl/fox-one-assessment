@@ -20,8 +20,6 @@
   --win: #34d17e;
   --ai: #9b7cff;
   --ai-soft: rgba(155, 124, 255, 0.16);
-  --fav: #f2b53c;
-  --fav-soft: rgba(242, 181, 60, 0.16);
 
   /* Surfaces / neutrals — dark (default) */
   --bg: #080b13;
@@ -75,8 +73,6 @@
   --win: #16a34a;
   --ai: #7c3aed;
   --ai-soft: rgba(124, 58, 237, 0.1);
-  --fav: #c07c0c;
-  --fav-soft: rgba(192, 124, 12, 0.12);
 
   --bg: #eef1f7;
   --bg-glow: #dfe7fb;

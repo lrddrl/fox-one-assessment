@@ -39,18 +39,8 @@ export function GameCard({ game }: GameCardProps) {
       </header>
 
       <div className={styles.teams}>
-        <TeamRow
-          team={game.away}
-          leagueLabel={game.leagueLabel}
-          gameState={game.state}
-          dim={loser === 'away'}
-        />
-        <TeamRow
-          team={game.home}
-          leagueLabel={game.leagueLabel}
-          gameState={game.state}
-          dim={loser === 'home'}
-        />
+        <TeamRow team={game.away} gameState={game.state} dim={loser === 'away'} />
+        <TeamRow team={game.home} gameState={game.state} dim={loser === 'home'} />
       </div>
 
       <footer className={styles.foot}>
