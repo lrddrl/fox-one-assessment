@@ -11,11 +11,10 @@ Python 3 standard library only. No third-party packages.
 | `logger.py`           | 3 — OOP design & API thinking |
 | `fibonacci.py`        | 4 — debugging & refactoring |
 | `group_anagrams.py`   | 5 — hashing & grouping |
-| `tests/`              | `unittest` suite, one module per task (51 tests) |
+| `tests/`              | `unittest` suite, one module per task (54 tests) |
 
-Every source file opens with a module docstring covering the approach, edge
-cases, alternatives considered, and trade-offs. This README is the short
-version.
+The source files are kept short; this README carries the approach, edge cases,
+and trade-offs for each task.
 
 ## Running
 
@@ -42,24 +41,24 @@ python python/merge_intervals.py
 
 ### Task 1 — `most_common_word(text, stopwords=None) -> str | None`
 
-**Approach.** Lower-case the text, extract word tokens with a regex (not
-`str.split`, which keeps punctuation stuck to words), drop stopwords, count
-with `collections.Counter`, return the top entry.
+**Approach.** Lower-case the text, split on whitespace, strip leading/trailing
+punctuation off each token, drop anything with no letter in it and anything in
+the stopword set, count with `collections.Counter`, return the top entry.
 
 **Edge cases.** Empty / whitespace-only / punctuation-only input → `None`.
 Every token filtered out by stopwords → `None`. `None` text → `None`
 (defensive). Counting and stopword matching are case-insensitive. Contractions
-and hyphenated words stay whole (`don't`, `one-nil`). Pure-number tokens (`3`,
-`2026`) are not counted as words; alphanumerics that read as words (`76ers`)
-are.
+and hyphenated words stay whole (`don't`, `one-nil`) because `str.strip` only
+touches the ends. Pure-number tokens (`3`, `2026`) are dropped by the
+"must contain a letter" check; alphanumerics that read as words (`76ers`) are
+kept.
 
 **Tie-break.** `Counter.most_common` keeps first-seen order on ties, i.e.
-first-mention wins — deterministic. A different rule (alphabetical, longest)
-would be an explicit sort, shown commented in the code.
+first-mention wins — deterministic.
 
-**Alternatives.** `re.findall(r"\w+")` is Unicode-aware but also grabs digits
-and underscores and gives no control over apostrophes; the chosen ASCII-word
-regex is predictable for English content and is a single constant to change.
+**Alternatives.** `re.findall` with a word pattern is more compact, but
+splitting on whitespace and trimming punctuation is easy to read and easy to
+adjust (e.g. keep `.` for tokens like `U.S.`).
 
 ### Task 2 — `merge_intervals(intervals) -> list[list[int]]`
 
@@ -128,11 +127,9 @@ input is unguarded too.
 **Fix.** Correct the recursive call, reject `n < 0`, and compute each number
 once (iterative / memoized).
 
-**Alternatives considered.** A generator (right shape for a *run* of values,
-wrong for one `fib(n)`); matrix exponentiation / fast doubling (O(log n), worth
-it only if this were a hot path); Binet's closed form (O(1), but float precision
-makes it silently wrong past ~F(70) — an exactness bug is a bad trade for a
-constant factor).
+**Alternatives.** Matrix exponentiation / fast doubling gets O(log n) but is
+only worth it in a hot path; Binet's closed form is O(1) but goes silently
+wrong past ~F(70) on float precision.
 
 | Version | Time | Space | Readability |
 |---|---|---|---|
