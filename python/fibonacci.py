@@ -1,25 +1,18 @@
-"""Task 4 - debugging & refactoring.
+"""Task 4 - Fibonacci: a deliberate bug, then the fix + iterative + memoized.
 
-Write a simple Fibonacci function, break it on purpose, then find the bug, fix
-it, and add iterative + memoized versions.
+The full write-up (why this bug, the trade-offs) is in README.md.
 """
 
 
-# The bug is the last line: it adds fib(n - 1) twice instead of
-# fib(n - 1) + fib(n - 2). It never crashes and F(0), F(1) are still right, so
-# nothing obvious looks wrong - you only catch it by checking real values. It
-# works out to fib_broken(n) == 2 ** (n - 1), so fib_broken(5) is 16, not 5.
-# Kept in the file so the tests can pin down exactly how it fails.
-
+# Bug: the last line adds fib(n - 1) twice - should be fib(n - 2). Never raises,
+# so only a test against known values catches it. Kept for the tests.
 def fib_broken(n: int) -> int:
     if n <= 1:
         return n
     return fib_broken(n - 1) + fib_broken(n - 1)
 
 
-# Fixed: correct the recursive call and reject negative n. Reads like the
-# definition, but it is O(2 ** n) and hits the recursion limit for large n.
-
+# Fixed. Correct, but O(2 ** n) - unusable past ~35.
 def fib_recursive(n: int) -> int:
     if n < 0:
         raise ValueError("n must be >= 0")
@@ -28,9 +21,7 @@ def fib_recursive(n: int) -> int:
     return fib_recursive(n - 1) + fib_recursive(n - 2)
 
 
-# Walk up from the bottom carrying just the last two numbers: O(n) time,
-# O(1) space, no recursion limit. This is what I would use for a plain fib(n).
-
+# O(n) time, O(1) space, no recursion limit. My default.
 def fib_iterative(n: int) -> int:
     if n < 0:
         raise ValueError("n must be >= 0")
@@ -40,10 +31,8 @@ def fib_iterative(n: int) -> int:
     return a
 
 
-# Same recursion, but cache each result so it is computed once: O(n) time,
-# O(n) space. The _cache arg is a bit ugly - =None, not ={}, so each top-level
-# call starts with a fresh dict.
-
+# Same recursion + a cache: O(n) time, O(n) space. _cache=None, not {}, so each
+# top-level call starts fresh.
 def fib_memoized(n: int, _cache: dict[int, int] | None = None) -> int:
     if n < 0:
         raise ValueError("n must be >= 0")
@@ -54,12 +43,6 @@ def fib_memoized(n: int, _cache: dict[int, int] | None = None) -> int:
     if n not in _cache:
         _cache[n] = fib_memoized(n - 1, _cache) + fib_memoized(n - 2, _cache)
     return _cache[n]
-
-
-# Why they differ: naive recursion recomputes the same subproblems (fib(5)
-# works out fib(2) three times), and it gets exponentially worse; the memoized
-# and iterative versions each compute every value once. I would default to
-# fib_iterative - this function has one job and O(1) space is free here.
 
 
 if __name__ == "__main__":
