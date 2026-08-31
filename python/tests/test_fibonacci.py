@@ -10,7 +10,6 @@ import unittest
 from fibonacci import (
     fib_broken,
     fib_iterative,
-    fib_lru,
     fib_memoized,
     fib_recursive,
 )
@@ -18,8 +17,8 @@ from fibonacci import (
 # F(0..10) - the sequence every implementation must reproduce.
 EXPECTED = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
 
-ALL_IMPLEMENTATIONS = (fib_recursive, fib_iterative, fib_memoized, fib_lru)
-FAST_IMPLEMENTATIONS = (fib_iterative, fib_memoized, fib_lru)
+ALL_IMPLEMENTATIONS = (fib_recursive, fib_iterative, fib_memoized)
+FAST_IMPLEMENTATIONS = (fib_iterative, fib_memoized)
 
 
 class BrokenFibonacciTests(unittest.TestCase):
@@ -45,11 +44,6 @@ class BrokenFibonacciTests(unittest.TestCase):
 
 
 class FibonacciTests(unittest.TestCase):
-    def setUp(self) -> None:
-        # lru_cache persists across calls for the process lifetime; clear it so
-        # each test starts from a known state.
-        fib_lru.cache_clear()
-
     def test_base_cases(self) -> None:
         for fn in ALL_IMPLEMENTATIONS:
             with self.subTest(fn=fn.__name__):

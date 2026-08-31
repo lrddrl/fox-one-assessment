@@ -136,14 +136,10 @@ wrong past ~F(70) on float precision.
 | `fib_recursive` | O(2ⁿ) | O(n) stack | best — it *is* the definition |
 | `fib_iterative` | O(n) | O(1) | good, but the tuple swap needs a moment; no longer looks like the maths |
 | `fib_memoized` | O(n) | O(n) cache + O(n) stack | fair — the `_cache` parameter leaks plumbing into the signature |
-| `fib_lru` | O(n) | O(n) cache | best of the fast three — one decorator, no plumbing |
 
-**Two different winners, which is the interesting part.** `fib_iterative` is the
-best *performer* (constant space, no recursion ceiling, no cache to invalidate);
-`fib_lru` is the best *readability-per-speed* — it keeps the shape of the
-definition and buys O(n) for one line. I default to `fib_iterative` because this
-function has one job and O(1) space is free here; on a messier recurrence where
-the recursive form carried real meaning, I'd take `lru_cache`.
+I default to `fib_iterative`: constant space, no recursion ceiling, no cache to
+invalidate, and this function has one job. On a messier recurrence where the
+recursive form carried real meaning I'd keep that shape and memoize it.
 
 **Why they differ.** Naive recursion recomputes the same subproblems
 exponentially — `fib(5)` evaluates `fib(3)` twice and `fib(2)` three times.
@@ -155,8 +151,7 @@ grow.
 **Edge cases.** `n = 0` → 0 and `n = 1` → 1 (the seeds, easy to get off by one);
 `n < 0` → `ValueError` rather than silent nonsense or a `RecursionError`; very
 large `n` is exact, not an overflow, because Python ints are arbitrary
-precision; `fib_lru`'s cache persists across calls, so tests `cache_clear()`
-between runs.
+precision.
 
 ### Task 5 — `group_anagrams(words) -> list[list[str]]`
 
