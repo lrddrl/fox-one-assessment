@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { getLeague } from '../config/leagues';
+import { LEAGUES } from '../config/leagues';
 import { fetchScoreboard, ScoreboardError } from '../lib/espn';
 import type { Game } from '../types';
 
@@ -39,83 +39,71 @@ const LOADING: State = {
 };
 
 /**
- * Loads one league's scoreboard: the initial fetch, the 30s poll, manual
- * refresh, and cancellation.
+ * Loads one league's scoreboard: the initial fetch, a 30s poll, and manual
+ * refresh. `fetch` in an effect, no data-fetching library — the brief asks for
+ * minimal dependencies and this reads top to bottom.
  *
- * `fetch` in an effect, no data-fetching library — the brief asks for minimal
- * dependencies and this reads top to bottom. One `AbortController` per request
- * means switching leagues cancels the in-flight call, so a slow MLB response
- * can't land after you've moved to NFL.
+ * Deliberately left minimal: no request cancellation. Switching leagues while a
+ * response is still in flight could, in theory, let the slow one land last and
+ * show the wrong league for a moment. Acceptable for this exercise; the fix is
+ * one `AbortController`.
  */
-export function useScoreboard(
-  leagueId: string,
-  autoRefresh: boolean,
-): ScoreboardModel {
+export function useScoreboard(leagueId: string): ScoreboardModel {
   const [state, setState] = useState<State>(LOADING);
-  const abortRef = useRef<AbortController | null>(null);
 
-  const load = useCallback(
-    async (isBackground: boolean) => {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
+  async function load(id: string, isBackground: boolean) {
+    if (isBackground) {
+      setState((prev) => ({ ...prev, isRefreshing: true }));
+    }
 
-      if (isBackground) {
-        setState((prev) => ({ ...prev, isRefreshing: true }));
-      }
+    try {
+      const league = LEAGUES.find((league) => league.id === id) ?? LEAGUES[0];
+      const games = await fetchScoreboard(league);
+      setState({
+        games,
+        status: 'ready',
+        error: null,
+        lastUpdated: Date.now(),
+        isRefreshing: false,
+      });
+    } catch (err) {
+      const message =
+        err instanceof ScoreboardError
+          ? err.message
+          : 'Something went wrong loading the scoreboard.';
+      setState((prev) => ({
+        ...prev,
+        // Keep showing the games we already have; only a failed first load
+        // (no games yet) becomes the full error screen.
+        status: prev.games.length > 0 ? 'ready' : 'error',
+        error: message,
+        isRefreshing: false,
+      }));
+    }
+  }
 
-      try {
-        const games = await fetchScoreboard(
-          getLeague(leagueId),
-          controller.signal,
-        );
-        if (controller.signal.aborted) return;
-        setState({
-          games,
-          status: 'ready',
-          error: null,
-          lastUpdated: Date.now(),
-          isRefreshing: false,
-        });
-      } catch (err) {
-        if (controller.signal.aborted) return;
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-        const message =
-          err instanceof ScoreboardError
-            ? err.message
-            : 'Something went wrong loading the scoreboard.';
-        setState((prev) => ({
-          ...prev,
-          // Keep showing the games we already have; only a failed first load
-          // (no games yet) becomes the full error screen.
-          status: prev.games.length > 0 ? 'ready' : 'error',
-          error: message,
-          isRefreshing: false,
-        }));
-      }
-    },
-    [leagueId],
-  );
-
-  // Fetch on mount and whenever the league changes. Resetting to LOADING first
-  // clears the previous league's games so they don't flash during the fetch —
-  // this whole effect is "synchronise the UI with the selected league".
+  // Fetch on mount and whenever the league changes. Reset to LOADING first so
+  // the previous league's games don't linger (and a failed switch shows the
+  // error screen, not stale scores under the wrong tab). This effect's whole
+  // job is "sync the UI with the selected league" — the textbook use of an
+  // effect — so the setState is expected here.
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect
     setState(LOADING);
-    void load(false);
-    return () => abortRef.current?.abort();
-  }, [load]);
+    void load(leagueId, false);
+  }, [leagueId]);
 
-  // Poll while auto-refresh is on.
+  // Poll every 30s.
   useEffect(() => {
-    if (!autoRefresh) return;
-    const id = window.setInterval(() => void load(true), POLL_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [autoRefresh, load]);
+    const timer = window.setInterval(
+      () => void load(leagueId, true),
+      POLL_INTERVAL_MS,
+    );
+    return () => window.clearInterval(timer);
+  }, [leagueId]);
 
   return {
     ...state,
-    refresh: () => void load(true),
+    refresh: () => void load(leagueId, true),
   };
 }

@@ -31,59 +31,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Auto-refresh toggle ---------------------------------------------------- */
-.auto {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  user-select: none;
-}
-
-.auto input {
-  position: absolute;
-  opacity: 0;
-  width: 1px;
-  height: 1px;
-}
-
-.track {
-  width: 34px;
-  height: 20px;
-  padding: 2px;
-  border-radius: var(--radius-pill);
-  background: var(--surface-3);
-  transition: background 0.15s ease;
-}
-
-.thumb {
-  display: block;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--text-muted);
-  transition:
-    transform 0.15s ease,
-    background 0.15s ease;
-}
-
-.auto input:checked + .track {
-  background: var(--brand-soft);
-}
-
-.auto input:checked + .track .thumb {
-  transform: translateX(14px);
-  background: var(--brand);
-}
-
-.auto input:focus-visible + .track {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-}
-
 /* Manual refresh button ------------------------------------------------- */
 .refresh {
   display: grid;

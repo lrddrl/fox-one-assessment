@@ -5,8 +5,6 @@ interface ScoreboardToolbarProps {
   gameCount: number;
   lastUpdated: number | null;
   isRefreshing: boolean;
-  autoRefresh: boolean;
-  onToggleAutoRefresh: () => void;
   onRefresh: () => void;
   disabled: boolean;
 }
@@ -15,8 +13,6 @@ export function ScoreboardToolbar({
   gameCount,
   lastUpdated,
   isRefreshing,
-  autoRefresh,
-  onToggleAutoRefresh,
   onRefresh,
   disabled,
 }: ScoreboardToolbarProps) {
@@ -40,18 +36,6 @@ export function ScoreboardToolbar({
             {isRefreshing ? 'Refreshing…' : `Updated ${updatedLabel}`}
           </span>
         ) : null}
-
-        <label className={styles.auto}>
-          <input
-            type="checkbox"
-            checked={autoRefresh}
-            onChange={onToggleAutoRefresh}
-          />
-          <span className={styles.track} aria-hidden="true">
-            <span className={styles.thumb} />
-          </span>
-          Auto
-        </label>
 
         <button
           type="button"

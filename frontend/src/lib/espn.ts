@@ -26,17 +26,13 @@ export class ScoreboardError extends Error {
   }
 }
 
-export async function fetchScoreboard(
-  league: LeagueConfig,
-  signal?: AbortSignal,
-): Promise<Game[]> {
+export async function fetchScoreboard(league: LeagueConfig): Promise<Game[]> {
   const url = `${ESPN_BASE}/${league.espnPath}/scoreboard`;
 
   let response: Response;
   try {
-    response = await fetch(url, { signal });
+    response = await fetch(url);
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error;
     throw new ScoreboardError('Could not reach the scoreboard service.', {
       cause: error,
     });
@@ -59,15 +55,16 @@ export async function fetchScoreboard(
 function normalizeEvent(event: EspnEvent, leagueLabel: string): Game | null {
   const competition = event.competitions?.[0];
   const competitors = competition?.competitors ?? [];
-  const home = competitors.find((c) => c.homeAway === 'home');
-  const away = competitors.find((c) => c.homeAway === 'away');
+  const home = competitors.find((competitor) => competitor.homeAway === 'home');
+  const away = competitors.find((competitor) => competitor.homeAway === 'away');
 
   // A game without two identifiable sides isn't renderable — skip it.
   if (!home || !away || !event.id) return null;
 
   const status = competition?.status ?? event.status;
   const broadcast =
-    competition?.broadcasts?.flatMap((b) => b.names ?? [])[0] ?? null;
+    competition?.broadcasts?.flatMap((broadcast) => broadcast.names ?? [])[0] ??
+    null;
 
   return {
     id: event.id,
@@ -106,7 +103,8 @@ function normalizeLogo(url: string | undefined): string | null {
 function toTeamSide(competitor: EspnCompetitor): TeamSide {
   const parsedScore = Number(competitor.score);
   const totalRecord =
-    competitor.records?.find((r) => r.type === 'total') ?? competitor.records?.[0];
+    competitor.records?.find((record) => record.type === 'total') ??
+    competitor.records?.[0];
   const rank = competitor.curatedRank?.current;
 
   return {

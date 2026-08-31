@@ -28,8 +28,3 @@ export const LEAGUES: readonly LeagueConfig[] = [
 ];
 
 export const DEFAULT_LEAGUE_ID = 'mlb';
-
-/** Look up a league by id, falling back to the first entry for an unknown id. */
-export function getLeague(id: string): LeagueConfig {
-  return LEAGUES.find((league) => league.id === id) ?? LEAGUES[0];
-}

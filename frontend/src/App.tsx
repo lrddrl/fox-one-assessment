@@ -4,16 +4,15 @@ import { AppHeader } from './components/AppHeader';
 import { GameList } from './components/GameList';
 import { LeagueTabs } from './components/LeagueTabs';
 import { ScoreboardToolbar } from './components/ScoreboardToolbar';
-import { DEFAULT_LEAGUE_ID, getLeague } from './config/leagues';
+import { DEFAULT_LEAGUE_ID, LEAGUES } from './config/leagues';
 import { useScoreboard } from './hooks/useScoreboard';
 import styles from './App.module.css';
 
 export default function App() {
   const [leagueId, setLeagueId] = useState(DEFAULT_LEAGUE_ID);
-  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  const scoreboard = useScoreboard(leagueId, autoRefresh);
-  const league = getLeague(leagueId);
+  const scoreboard = useScoreboard(leagueId);
+  const league = LEAGUES.find((league) => league.id === leagueId) ?? LEAGUES[0];
 
   return (
     <div className={styles.app}>
@@ -28,8 +27,6 @@ export default function App() {
           gameCount={scoreboard.games.length}
           lastUpdated={scoreboard.lastUpdated}
           isRefreshing={scoreboard.isRefreshing}
-          autoRefresh={autoRefresh}
-          onToggleAutoRefresh={() => setAutoRefresh((on) => !on)}
           onRefresh={scoreboard.refresh}
           disabled={scoreboard.status === 'loading'}
         />
