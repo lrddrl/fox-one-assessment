@@ -3,23 +3,18 @@ import { useEffect, useState } from 'react';
 import { formatRelativeTime } from '../lib/format';
 
 /**
- * Returns a live-updating "x ago" string for the given timestamp, re-rendering
- * on an interval so the label stays current without the parent re-rendering.
+ * A live "x ago" string for the given timestamp. Holds the current time in
+ * state and bumps it every 10s, so the label stays current on its own.
  *
  * @param timestamp epoch ms, or null to render nothing
- * @param everyMs   how often to recompute (default 10s)
  */
-export function useRelativeTime(
-  timestamp: number | null,
-  everyMs = 10_000,
-): string {
-  const [, setTick] = useState(0);
+export function useRelativeTime(timestamp: number | null): string {
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (timestamp == null) return;
-    const id = window.setInterval(() => setTick((t) => t + 1), everyMs);
+    const id = window.setInterval(() => setNow(Date.now()), 10_000);
     return () => window.clearInterval(id);
-  }, [timestamp, everyMs]);
+  }, []);
 
-  return timestamp == null ? '' : formatRelativeTime(timestamp);
+  return timestamp == null ? '' : formatRelativeTime(timestamp, now);
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export type Theme = 'dark' | 'light';
 
@@ -7,15 +7,12 @@ const STORAGE_KEY = 'scoreboard:theme';
 /**
  * Light/dark theme with persistence.
  *
- * Resolution order for the initial value:
- *   1. a previous choice saved in localStorage
- *   2. the OS `prefers-color-scheme`
- *   3. dark (the app's default look)
- *
- * The chosen theme is written to `<html data-theme>`, which drives the token
- * override in index.css.
+ * Initial value: a saved choice in localStorage, else the OS
+ * `prefers-color-scheme`, else dark (the app's default look). The chosen theme
+ * is written to `<html data-theme>`, which drives the token override in
+ * index.css.
  */
-export function useTheme(): { theme: Theme; toggle: () => void } {
+export function useTheme() {
   const [theme, setTheme] = useState<Theme>(resolveInitialTheme);
 
   useEffect(() => {
@@ -23,14 +20,14 @@ export function useTheme(): { theme: Theme; toggle: () => void } {
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {
-      // Storage can be unavailable (private mode, blocked cookies) — the theme
-      // still applies for this session, it just won't be remembered.
+      // Storage can be blocked (private mode) — the theme still applies for
+      // this session, it just won't be remembered.
     }
   }, [theme]);
 
-  const toggle = useCallback(() => {
+  function toggle() {
     setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
-  }, []);
+  }
 
   return { theme, toggle };
 }
@@ -42,8 +39,6 @@ function resolveInitialTheme(): Theme {
   } catch {
     // ignore and fall through to the system preference
   }
-  const prefersLight =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-color-scheme: light)').matches;
+  const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
   return prefersLight ? 'light' : 'dark';
 }

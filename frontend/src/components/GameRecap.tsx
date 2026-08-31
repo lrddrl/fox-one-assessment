@@ -1,68 +1,39 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { fetchRecap, type RecapResult } from '../lib/recap';
 import type { Game } from '../types';
 import styles from './GameRecap.module.css';
 
 /**
- * Results are cached for the page's lifetime, keyed by game id. Re-opening a
- * panel — or coming back to a league — is then instant and spends no quota.
- * A game's context (score, status) does change over its lifetime; 5 minutes of
- * staleness is an acceptable trade for a recap blurb, and the server sets a
- * matching `s-maxage`.
+ * Recaps are cached for the page's lifetime, keyed by game id — re-opening a
+ * card, or leaving a league and coming back, is then instant and spends no
+ * quota. 5 minutes of staleness is a fine trade for a text blurb (the server
+ * sets a matching `s-maxage`).
  */
 const recapCache = new Map<string, RecapResult>();
 
-interface GameRecapProps {
-  game: Game;
-}
-
-export function GameRecap({ game }: GameRecapProps) {
+export function GameRecap({ game }: { game: Game }) {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<RecapResult | null>(
     () => recapCache.get(game.id) ?? null,
   );
   const [loading, setLoading] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
 
-  const isPreview = game.state === 'pre';
-  const actionLabel = isPreview ? 'AI preview' : 'AI recap';
+  const label = game.state === 'pre' ? 'AI preview' : 'AI recap';
 
-  const load = useCallback(
-    async (force = false) => {
-      if (loading) return;
-      if (!force) {
-        const cached = recapCache.get(game.id);
-        if (cached) {
-          setResult(cached);
-          return;
-        }
-      }
-      setLoading(true);
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      try {
-        const next = await fetchRecap(game, controller.signal);
-        if (controller.signal.aborted) return;
-        recapCache.set(game.id, next);
-        setResult(next);
-      } catch {
-        // Only AbortError reaches here; fetchRecap maps everything else.
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    },
-    [game, loading],
-  );
+  async function load() {
+    setLoading(true);
+    const next = await fetchRecap(game);
+    recapCache.set(game.id, next);
+    setResult(next);
+    setLoading(false);
+  }
 
-  useEffect(() => () => abortRef.current?.abort(), []);
-
-  const toggle = () => {
+  function toggle() {
     const next = !open;
     setOpen(next);
-    if (next && !result) void load();
-  };
+    if (next && !result && !loading) void load();
+  }
 
   return (
     <div className={styles.wrap}>
@@ -73,12 +44,16 @@ export function GameRecap({ game }: GameRecapProps) {
         aria-expanded={open}
       >
         <SparkleIcon />
-        {actionLabel}
+        {label}
         <ChevronIcon className={open ? styles.chevronOpen : styles.chevron} />
       </button>
 
       {open ? (
-        <div className={styles.panel} role="region" aria-label={`${actionLabel} for this game`}>
+        <div
+          className={styles.panel}
+          role="region"
+          aria-label={`${label} for this game`}
+        >
           {loading ? <RecapSkeleton /> : null}
 
           {!loading && result?.status === 'ok' ? (
@@ -89,7 +64,7 @@ export function GameRecap({ game }: GameRecapProps) {
                 <button
                   type="button"
                   className={styles.regen}
-                  onClick={() => void load(true)}
+                  onClick={() => void load()}
                 >
                   Regenerate
                 </button>
@@ -111,7 +86,7 @@ export function GameRecap({ game }: GameRecapProps) {
               <button
                 type="button"
                 className={styles.regen}
-                onClick={() => void load(true)}
+                onClick={() => void load()}
               >
                 Try again
               </button>

@@ -2,9 +2,8 @@
  * Client for the AI recap feature.
  *
  * The browser never talks to MiniMax directly — it calls our own `/api/recap`
- * serverless function, which holds the API key. This module just shapes the
- * request and maps the response into a small discriminated union the UI can
- * switch on.
+ * serverless function, which holds the API key. This module shapes the request
+ * and maps the response into a small union the UI can switch on.
  */
 
 import type { Game } from '../types';
@@ -15,25 +14,20 @@ export type RecapResult =
   | { status: 'unconfigured' }
   | { status: 'error'; message: string };
 
-export async function fetchRecap(
-  game: Game,
-  signal?: AbortSignal,
-): Promise<RecapResult> {
+export async function fetchRecap(game: Game): Promise<RecapResult> {
   let response: Response;
   try {
     response = await fetch('/api/recap', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ game: toRecapContext(game) }),
-      signal,
     });
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+  } catch {
     return { status: 'error', message: 'Could not reach the recap service.' };
   }
 
   // 501 = key not set on the server. 404 = no serverless runtime at all
-  // (running the bare Vite dev server). Both mean "AI isn't available here".
+  // (the bare Vite dev server). Both mean "AI isn't available here".
   if (response.status === 501 || response.status === 404) {
     return { status: 'unconfigured' };
   }
@@ -52,8 +46,8 @@ export async function fetchRecap(
 }
 
 /**
- * Send only what the model needs. Keeps the request tiny and avoids handing a
- * third party any more of the payload than necessary.
+ * Send only what the model needs — keeps the request tiny and hands a third
+ * party no more of the payload than necessary.
  */
 function toRecapContext(game: Game) {
   return {

@@ -6,7 +6,8 @@ export function AppHeader() {
     <header className={styles.header}>
       <div className={styles.inner}>
         <div className={styles.brand}>
-          <Mark />
+          {/* Same file the browser tab uses (public/favicon.svg). */}
+          <img className={styles.mark} src="/favicon.svg" alt="" width={28} height={28} />
           <div className={styles.titleGroup}>
             <span className={styles.title}>Scoreboard</span>
             <span className={styles.tagline}>
@@ -17,23 +18,5 @@ export function AppHeader() {
         <ThemeToggle />
       </div>
     </header>
-  );
-}
-
-/** Abstract broadcast mark — three angled bars. Not the FOX logo. */
-function Mark() {
-  return (
-    <svg
-      className={styles.mark}
-      width="30"
-      height="30"
-      viewBox="0 0 32 32"
-      fill="none"
-      aria-hidden="true"
-    >
-      <rect x="3" y="6" width="7" height="20" rx="2" transform="skewX(-12)" fill="var(--brand)" />
-      <rect x="13" y="6" width="7" height="20" rx="2" transform="skewX(-12)" fill="var(--text)" opacity="0.85" />
-      <rect x="23" y="6" width="7" height="20" rx="2" transform="skewX(-12)" fill="var(--brand)" opacity="0.5" />
-    </svg>
   );
 }
