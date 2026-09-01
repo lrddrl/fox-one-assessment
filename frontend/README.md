@@ -29,9 +29,9 @@ three of those example categories are also exercised across the app:
 
 | Example from the brief | Where it shows up |
 |---|---|
-| **State management** | `useScoreboard` — a custom hook owning all async state (games, status, error, `lastUpdated`, `isRefreshing`) with a *derived* loading status and per-request cancellation; `useTheme` (persisted to `localStorage`); a module-level `Map` in `GameRecap` caching recaps by game id. No state-management library — the state doesn't warrant one; see [Design decisions](#design-decisions-worth-calling-out). |
+| **State management** | `useScoreboard` — a custom hook owning all async state (games, status, error, `lastUpdated`, `isRefreshing`) on one state object with an explicit `status` field; `useTheme` (persisted to `localStorage`); a module-level `Map` in `GameRecap` caching recaps by game id. No state-management library, no Context — the state doesn't warrant it; see [Design decisions](#design-decisions-worth-calling-out). |
 | **CSS** | A token-based design system in `index.css` (colour, spacing, radii, type scales) driving a full dark **and** light theme, with CSS Modules scoped per component. Loading skeletons and the live-game pulse are CSS animations, dropped under `prefers-reduced-motion`. |
-| **Client-side effect** | 30-second polling with an `AbortController` per request; a live "updated 12s ago" ticker; theme persistence; and the lazy, cached, per-card AI fetch. |
+| **Client-side effect** | 30-second polling; a live "updated 12s ago" ticker; a minimum 2-second refresh spinner so a poll or a button press is noticeable rather than a blink; theme persistence; the lazy, cached, per-card AI fetch. |
 
 ## Stack
 
@@ -39,7 +39,7 @@ three of those example categories are also exercised across the app:
 |---|---|
 | **React 19 + Vite + TypeScript** | Current, fast dev loop, types catch the shape mismatches you get from an untyped API. |
 | **ESPN's public JSON API** | No key — `git clone && npm install && npm run dev` just works. Trade-off below. |
-| **Plain `fetch` in a hook** | The brief asks for minimal dependencies. `useScoreboard` is ~90 readable lines. TanStack Query / SWR would be the next step for caching + dedupe. |
+| **Plain `fetch` in a hook** | The brief asks for minimal dependencies. `useScoreboard` reads top to bottom in ~130 lines. TanStack Query / SWR would be the next step for caching, dedupe, and request cancellation. |
 | **CSS Modules** | Scoped styles, co-located with components, zero runtime, no extra dependency. |
 | **Vercel serverless function** for the AI call | Keeps the MiniMax key server-side. The browser never sees it. |
 
@@ -103,7 +103,7 @@ src/
     recap.ts            client for POST /api/recap
     format.ts           pure date / "x ago" helpers
   hooks/
-    useScoreboard.ts    fetch + polling + cancellation + derived status
+    useScoreboard.ts    fetch + 30s polling; one state object
     useRelativeTime.ts  live-updating "updated 12s ago"
     useTheme.ts         dark/light, persisted, system-aware
   components/           presentational; one folder-level concern each
@@ -111,10 +111,10 @@ api/
   recap.ts              serverless MiniMax proxy
 ```
 
-**Data flow:** `App` holds the two pieces of UI state (`leagueId`,
-`autoRefresh`) and passes them to `useScoreboard`, which owns everything async
-and returns `{ games, status, error, lastUpdated, isRefreshing, refresh }`.
-Everything below `App` is presentational — given props, renders markup.
+**Data flow:** `App` holds one piece of UI state (`leagueId`) and passes it to
+`useScoreboard`, which owns everything async and returns
+`{ games, status, error, lastUpdated, isRefreshing, refresh }`. Everything below
+`App` is presentational — given props, renders markup.
 
 ## Design decisions worth calling out
 
@@ -123,23 +123,30 @@ Everything below `App` is presentational — given props, renders markup.
   optional; `normalizeEvent` skips a malformed game rather than throwing, so one
   bad record can't blank the board. A production version would put this behind
   our own cached endpoint.
-- **No state-management library.** There are two pieces of UI state
-  (`leagueId`, `autoRefresh`) and one data hook. `useState` plus a custom hook
-  is the entire surface — Redux or Zustand here would be ceremony, and the brief
-  asks to keep it simple. The line I'd cross for one: shared state that several
-  distant components both read *and* write. Nothing in this app does.
-- **Loading state is derived, not stored.** `useScoreboard` compares the
-  requested league to the loaded one; if they differ, we're "loading". This
-  avoids resetting state inside an effect when you switch leagues.
+- **No state-management library, no Context.** One piece of UI state
+  (`leagueId`) and one data hook. `useState` plus a custom hook is the entire
+  surface — Redux or Zustand here would be ceremony, and the brief asks to keep
+  it simple. The line I'd cross for one: shared state that several distant
+  components both read *and* write. Nothing in this app does.
+- **`status` is a stored field, set explicitly.** `useScoreboard` keeps one
+  state object; switching leagues resets it to `LOADING` inside the effect. The
+  lint rule flags a `setState` in an effect, but "the `leagueId` prop changed,
+  re-sync the UI" is exactly what an effect is for — one disable comment says so.
+  An earlier version derived `status` from a `loadedLeagueId` tracker to dodge
+  the warning; explicit reads better.
+- **No request cancellation.** Switching leagues fast while a response is in
+  flight could, in principle, let the slow one land last. The `setState(LOADING)`
+  on switch covers the common case; a full fix is one `AbortController` per
+  request. Cut here for readability — a first thing I'd add back for production.
 - **Failed refresh ≠ failed load.** If a background poll fails but we already
   have games, the board keeps showing them with a "may be stale" note. Only a
   failed *first* load shows the full error screen.
 - **The AI feature fails soft.** Timeout, no key, bad response, offline — every
   path resolves to a message, never a broken card. Results are cached per game
   for the page's lifetime so re-opening is instant and costs no quota.
-- **Accessibility:** the league switcher is a real ARIA tablist with arrow-key
-  navigation; every control has a visible focus ring; animation is dropped under
-  `prefers-reduced-motion`.
+- **Accessibility:** the league switcher is a real ARIA tablist (`role="tab"` /
+  `aria-selected`); every control has a visible focus ring; animation is dropped
+  under `prefers-reduced-motion`.
 
 ## The AI recap function (`api/recap.ts`)
 
@@ -175,6 +182,8 @@ The repo is a monorepo; this app lives in `frontend/`.
 ## With more time
 
 - A thin cached backend proxy for ESPN instead of calling it from the browser.
+- An `AbortController` per request, so a slow league fetch can't land after
+  you've switched away.
 - Stream the recap token-by-token instead of waiting for the full response.
 - Smarter polling: pause on a hidden tab, back off on repeated failure.
 - A small test suite (Vitest + Testing Library) around `lib/espn.ts`
