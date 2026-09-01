@@ -15,6 +15,8 @@ import type { Game, GameState, TeamSide } from '../types';
 
 const ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports';
 
+// mlb https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard
+
 /** Networks that a FOX One subscriber can actually watch. */
 const FOX_NETWORKS = ['FOX', 'FS1', 'FS2', 'FOX DEPORTES'];
 
