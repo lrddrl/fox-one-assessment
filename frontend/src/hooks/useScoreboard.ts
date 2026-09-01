@@ -6,6 +6,11 @@ import type { Game } from '../types';
 
 const POLL_INTERVAL_MS = 30_000;
 
+// A refresh usually finishes in a fraction of a second — too quick to notice.
+// Hold the spinner for at least this long so a poll (or a button press) visibly
+// registers, and the data doesn't seem to change on its own.
+const MIN_SPIN_MS = 2_000;
+
 export type ScoreboardStatus = 'loading' | 'ready' | 'error';
 
 export interface ScoreboardModel {
@@ -52,6 +57,7 @@ export function useScoreboard(leagueId: string): ScoreboardModel {
   const [state, setState] = useState<State>(LOADING);
 
   async function load(id: string, isBackground: boolean) {
+    const startedAt = Date.now();
     if (isBackground) {
       setState((prev) => ({ ...prev, isRefreshing: true }));
     }
@@ -64,7 +70,8 @@ export function useScoreboard(leagueId: string): ScoreboardModel {
         status: 'ready',
         error: null,
         lastUpdated: Date.now(),
-        isRefreshing: false,
+        // Data is in, but keep the spinner up for a moment (below) on a refresh.
+        isRefreshing: isBackground,
       });
     } catch (err) {
       const message =
@@ -77,8 +84,19 @@ export function useScoreboard(leagueId: string): ScoreboardModel {
         // (no games yet) becomes the full error screen.
         status: prev.games.length > 0 ? 'ready' : 'error',
         error: message,
-        isRefreshing: false,
+        isRefreshing: isBackground,
       }));
+    }
+
+    // Let the spinner run for at least MIN_SPIN_MS so the refresh is noticeable,
+    // then clear it. Only touches `isRefreshing`, so it's safe if the league
+    // changed in the meantime.
+    if (isBackground) {
+      const remaining = MIN_SPIN_MS - (Date.now() - startedAt);
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
+      setState((prev) => ({ ...prev, isRefreshing: false }));
     }
   }
 
