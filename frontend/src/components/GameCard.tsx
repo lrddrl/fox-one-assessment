@@ -26,7 +26,9 @@ export function GameCard({ game }: GameCardProps) {
       : null;
 
   return (
-    <article className={styles.card}>
+    <article
+      className={`${styles.card} ${game.state === 'in' ? styles.live : ''}`}
+    >
       <header className={styles.head}>
         <StatusBadge state={game.state} detail={statusDetail} />
         {game.broadcast ? (

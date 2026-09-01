@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 import type { GameState, TeamSide } from '../types';
 import styles from './TeamRow.module.css';
@@ -11,8 +11,19 @@ interface TeamRowProps {
 }
 
 export function TeamRow({ team, gameState, dim }: TeamRowProps) {
+  const won = team.isWinner && gameState === 'post';
+
   return (
-    <div className={`${styles.row} ${dim ? styles.dim : ''}`}>
+    <div
+      className={`${styles.row} ${dim ? styles.dim : ''} ${won ? styles.won : ''}`}
+      // ESPN ships every team's brand colour in the payload; most scoreboards
+      // never use it. Drive the left accent bar (and a faint winner tint) off it.
+      style={
+        team.color
+          ? ({ '--team-color': team.color } as CSSProperties)
+          : undefined
+      }
+    >
       <TeamLogo url={team.logoUrl} name={team.displayName} />
 
       <div className={styles.identity}>

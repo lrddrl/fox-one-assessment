@@ -10,9 +10,19 @@ import styles from './App.module.css';
 
 export default function App() {
   const [leagueId, setLeagueId] = useState(DEFAULT_LEAGUE_ID);
+  // A view preference, not a fetch parameter — we always load the whole league
+  // and narrow it here. Kept in App next to leagueId; useScoreboard stays
+  // "load one league's games" and nothing more.
+  const [foxOnly, setFoxOnly] = useState(false);
 
   const scoreboard = useScoreboard(leagueId);
   const league = LEAGUES.find((league) => league.id === leagueId) ?? LEAGUES[0];
+
+  // Derived, not stored: recomputed from games + foxOnly every render, so it
+  // can never drift out of sync with the toggle.
+  const visibleGames = foxOnly
+    ? scoreboard.games.filter((game) => game.isOnFox)
+    : scoreboard.games;
 
   return (
     <div className={styles.app}>
@@ -24,18 +34,22 @@ export default function App() {
         </div>
 
         <ScoreboardToolbar
-          gameCount={scoreboard.games.length}
+          gameCount={visibleGames.length}
+          totalCount={scoreboard.games.length}
           lastUpdated={scoreboard.lastUpdated}
           isRefreshing={scoreboard.isRefreshing}
           onRefresh={scoreboard.refresh}
           disabled={scoreboard.status === 'loading'}
+          foxOnly={foxOnly}
+          onToggleFox={() => setFoxOnly((on) => !on)}
         />
 
         <GameList
           status={scoreboard.status}
-          games={scoreboard.games}
+          games={visibleGames}
           error={scoreboard.error}
           leagueLabel={league.label}
+          foxOnly={foxOnly}
           onRetry={scoreboard.refresh}
         />
       </main>

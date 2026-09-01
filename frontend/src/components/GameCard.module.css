@@ -18,6 +18,23 @@
   transform: translateY(-2px);
 }
 
+/* A game in progress gets a slow "breathing" halo so the live board reads at a
+   glance. Dropped automatically under prefers-reduced-motion (see index.css). */
+.live {
+  border-color: color-mix(in srgb, var(--live) 45%, var(--border));
+  animation: liveBreath 2.6s ease-in-out infinite;
+}
+
+@keyframes liveBreath {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--live-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+
 .head {
   display: flex;
   align-items: center;

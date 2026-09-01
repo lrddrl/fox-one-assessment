@@ -1,10 +1,31 @@
 .row {
+  position: relative;
   display: grid;
   /* logo | name + record | score | winner tick */
   grid-template-columns: 28px 1fr auto 14px;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) 0;
+  padding: var(--space-2) 0 var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+}
+
+/* Team brand-colour accent bar (colour comes from the inline --team-color var
+   set in TeamRow.tsx; falls back to the neutral border when a team has none). */
+.row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--team-color, var(--border-strong));
+}
+
+/* Winning side once a game is final: a whisper of the team's colour. */
+.won {
+  background: color-mix(in srgb, var(--team-color, transparent) 10%, transparent);
 }
 
 .dim {

@@ -12,7 +12,7 @@ with an AI-written recap / preview for any game.
 | A new app in React or Vue (latest) | React 19 + Vite 8 + TypeScript |
 | Query a publicly available API | ESPN's public scoreboard API — no key required ([why this one](#why-this-api)) |
 | Display the data in a list | A responsive grid of game cards, one per game, for the selected league |
-| **One additional feature of your choice** *(e.g. state management, CSS, some client-side effect)* | **The AI recap** — see below. The brief's three examples are all exercised too; the table under [Additional feature](#additional-feature) says where. |
+| **One additional feature of your choice** *(e.g. state management, CSS, some client-side effect)* | **The AI recap** *and* an **"On FOX" filter** — see below. The brief's three examples are all exercised too; the table under [Additional feature](#additional-feature) says where. |
 | Push to GitHub | [github.com/lrddrl/fox-one-assessment](https://github.com/lrddrl/fox-one-assessment) |
 
 ### Additional feature
@@ -23,14 +23,29 @@ kickoff, a live read during the game, a recap after. It turns a box score into
 something a casual fan can read. The app works fully without it (the panel
 explains it isn't configured rather than erroring).
 
+**The "On FOX" filter.** The target user is a FOX One subscriber asking one
+question: *what can I watch tonight?* Every game is normalised with an `isOnFox`
+flag (true when `FOX`, `FS1`, `FS2`, or `FOX Deportes` carries it). The toolbar
+toggle narrows the grid to those games and the counter reads "6 of 16 on FOX".
+It's a **view preference, not a fetch parameter** — the app always loads the
+whole league and filters in `App`; the filter survives a league switch. When
+nothing matches, the empty state says "No MLB games on FOX today" rather than the
+misleading "No games today".
+
+**Team identity in the card.** ESPN ships each team's brand colour in the
+payload and most scoreboards ignore it. Each `TeamRow` gets a thin accent bar in
+that colour, the winning side a 10%-opacity wash of it (`color-mix`), and a game
+in progress a slow "breathing" halo — all pure CSS, dropped under
+`prefers-reduced-motion`, zero extra requests or dependencies.
+
 The brief lists *state management, CSS, or some client-side effect* as examples
 of what an additional feature might be. The AI recap is the feature — and all
 three of those example categories are also exercised across the app:
 
 | Example from the brief | Where it shows up |
 |---|---|
-| **State management** | `useScoreboard` — a custom hook owning all async state (games, status, error, `lastUpdated`, `isRefreshing`) on one state object with an explicit `status` field; `useTheme` (persisted to `localStorage`); a module-level `Map` in `GameRecap` caching recaps by game id. No state-management library, no Context — the state doesn't warrant it; see [Design decisions](#design-decisions-worth-calling-out). |
-| **CSS** | A token-based design system in `index.css` (colour, spacing, radii, type scales) driving a full dark **and** light theme, with CSS Modules scoped per component. Loading skeletons and the live-game pulse are CSS animations, dropped under `prefers-reduced-motion`. |
+| **State management** | `useScoreboard` — a custom hook owning all async state (games, status, error, `lastUpdated`, `isRefreshing`) on one state object with an explicit `status` field; two `useState`s in `App` (`leagueId`, `foxOnly`) with `visibleGames` as a *derived* value, never a third piece of state; `useTheme` (persisted to `localStorage`); a module-level `Map` in `GameRecap` caching recaps by game id. No state-management library, no Context — the state doesn't warrant it; see [Design decisions](#design-decisions-worth-calling-out). |
+| **CSS** | A token-based design system in `index.css` (colour, spacing, radii, type scales) driving a full dark **and** light theme, with CSS Modules scoped per component. Loading skeletons, the live-game pulse, and the card "breathing" halo are CSS animations, dropped under `prefers-reduced-motion`. Team brand colours drive per-row accents via an inline `--team-color` custom property. |
 | **Client-side effect** | 30-second polling; a live "updated 12s ago" ticker; a minimum 2-second refresh spinner so a poll or a button press is noticeable rather than a blink; theme persistence; the lazy, cached, per-card AI fetch. |
 
 ## Stack
@@ -107,14 +122,33 @@ src/
     useRelativeTime.ts  live-updating "updated 12s ago"
     useTheme.ts         dark/light, persisted, system-aware
   components/           presentational; one folder-level concern each
+    ScoreboardToolbar   game count, "updated Ns ago", refresh, "On FOX" toggle
+    GameCard/TeamRow    one game; team brand-colour accent + live "breathing" halo
+    feedback/           shared loading / empty / error states
 api/
   recap.ts              serverless MiniMax proxy
 ```
 
-**Data flow:** `App` holds one piece of UI state (`leagueId`) and passes it to
-`useScoreboard`, which owns everything async and returns
-`{ games, status, error, lastUpdated, isRefreshing, refresh }`. Everything below
-`App` is presentational — given props, renders markup.
+**Data flow:** `App` holds two pieces of UI state — `leagueId` and `foxOnly`.
+`leagueId` decides *what data to fetch*: it goes into `useScoreboard`, which owns
+everything async and returns
+`{ games, status, error, lastUpdated, isRefreshing, refresh }`. `foxOnly` decides
+*what to display*: it never reaches the hook — `App` derives
+`visibleGames = foxOnly ? games.filter(isOnFox) : games` on each render and passes
+that down. Everything below `App` is presentational — given props, renders markup.
+
+```
+leagueId ──▶ useScoreboard ──▶ fetch + normaliseEvent (ESPN shape ──▶ Game) ──▶ games
+                                                                                 │
+foxOnly ──────────────────────────────────┐                                      │
+                                          ▼                                      ▼
+                              visibleGames = filter(games, foxOnly)
+                                          │
+                          ┌───────────────┴───────────────┐
+                          ▼                               ▼
+                  ScoreboardToolbar                    GameList ──▶ GameCard ──▶ TeamRow / GameRecap
+                  (count, On FOX toggle)
+```
 
 ## Design decisions worth calling out
 
@@ -123,11 +157,18 @@ api/
   optional; `normalizeEvent` skips a malformed game rather than throwing, so one
   bad record can't blank the board. A production version would put this behind
   our own cached endpoint.
-- **No state-management library, no Context.** One piece of UI state
-  (`leagueId`) and one data hook. `useState` plus a custom hook is the entire
-  surface — Redux or Zustand here would be ceremony, and the brief asks to keep
-  it simple. The line I'd cross for one: shared state that several distant
+- **No state-management library, no Context.** Two pieces of UI state
+  (`leagueId`, `foxOnly`) and one data hook. `useState` plus a custom hook is the
+  entire surface — Redux or Zustand here would be ceremony, and the brief asks to
+  keep it simple. The line I'd cross for one: shared state that several distant
   components both read *and* write. Nothing in this app does.
+- **The filter is a view preference, kept out of the data hook.** `foxOnly`
+  lives in `App`, not `useScoreboard` — the request always loads the whole
+  league. `visibleGames` is *derived* from `games + foxOnly` every render, never
+  stored, so it can't drift out of sync with the toggle (same principle as not
+  storing a `loading` boolean you could compute). Switching leagues re-fetches
+  but leaves `foxOnly` untouched: "I only want FOX games" is an intent that
+  should persist across leagues.
 - **`status` is a stored field, set explicitly.** `useScoreboard` keeps one
   state object; switching leagues resets it to `LOADING` inside the effect. The
   lint rule flags a `setState` in an effect, but "the `leagueId` prop changed,
@@ -186,5 +227,9 @@ The repo is a monorepo; this app lives in `frontend/`.
   you've switched away.
 - Stream the recap token-by-token instead of waiting for the full response.
 - Smarter polling: pause on a hidden tab, back off on repeated failure.
+- Flash a card when a score changes between polls (diff the incoming `games`
+  against the last set) — turns the 30s refresh into something you can watch.
+- Persist the "On FOX" filter (and remember it per league) the way `useTheme`
+  persists the theme.
 - A small test suite (Vitest + Testing Library) around `lib/espn.ts`
   normalisation and `useScoreboard` state transitions.

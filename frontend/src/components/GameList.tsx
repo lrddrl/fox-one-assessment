@@ -11,6 +11,8 @@ interface GameListProps {
   games: Game[];
   error: string | null;
   leagueLabel: string;
+  /** The FOX filter is on — changes the empty-state copy. */
+  foxOnly: boolean;
   onRetry: () => void;
 }
 
@@ -21,6 +23,7 @@ export function GameList({
   games,
   error,
   leagueLabel,
+  foxOnly,
   onRetry,
 }: GameListProps) {
   if (status === 'loading') {
@@ -44,7 +47,7 @@ export function GameList({
   if (games.length === 0) {
     return (
       <div className={styles.grid}>
-        <EmptyState league={leagueLabel} />
+        <EmptyState league={leagueLabel} foxOnly={foxOnly} />
       </div>
     );
   }

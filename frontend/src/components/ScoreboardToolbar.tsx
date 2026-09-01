@@ -3,26 +3,37 @@ import styles from './ScoreboardToolbar.module.css';
 
 interface ScoreboardToolbarProps {
   gameCount: number;
+  /** Games in the league before the FOX filter — for the "3 of 12" label. */
+  totalCount: number;
   lastUpdated: number | null;
   isRefreshing: boolean;
   onRefresh: () => void;
   disabled: boolean;
+  foxOnly: boolean;
+  onToggleFox: () => void;
 }
 
 export function ScoreboardToolbar({
   gameCount,
+  totalCount,
   lastUpdated,
   isRefreshing,
   onRefresh,
   disabled,
+  foxOnly,
+  onToggleFox,
 }: ScoreboardToolbarProps) {
   const updatedLabel = useRelativeTime(lastUpdated);
 
   return (
     <div className={styles.bar}>
       <p className={styles.count}>
-        {gameCount === 0 ? (
+        {totalCount === 0 ? (
           'No games'
+        ) : foxOnly ? (
+          <>
+            <strong>{gameCount}</strong> of {totalCount} on FOX
+          </>
         ) : (
           <>
             <strong>{gameCount}</strong> {gameCount === 1 ? 'game' : 'games'}
@@ -31,6 +42,15 @@ export function ScoreboardToolbar({
       </p>
 
       <div className={styles.controls}>
+        <button
+          type="button"
+          className={`${styles.foxToggle} ${foxOnly ? styles.foxToggleOn : ''}`}
+          onClick={onToggleFox}
+          aria-pressed={foxOnly}
+        >
+          On FOX
+        </button>
+
         {updatedLabel ? (
           <span className={styles.updated}>
             {isRefreshing ? 'Refreshing…' : `Updated ${updatedLabel}`}
