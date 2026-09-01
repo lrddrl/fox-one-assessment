@@ -10,7 +10,14 @@ class Logger:
 
     def search(self, query: str) -> list[str]:
         needle = query.casefold()
-        return [message for message in self._messages if needle in message.casefold()]
+        matched_messages = []
+        
+        for message in self._messages:
+            normalized_message = message.casefold()
+            if needle in normalized_message:
+                matched_messages.append(message)
+                
+        return matched_messages
 
 
 if __name__ == "__main__":
