@@ -45,6 +45,13 @@ def fib_memoized(n: int, _cache: dict[int, int] | None = None) -> int:
     return _cache[n]
 
 
+"""
+Version	Time	Space	Readability
+fib_recursive	O(2ⁿ)	O(n) call stack	Best — it is the definition
+fib_iterative	O(n)	O(1) Good, but the tuple swap takes a second to read
+fib_memoized	O(n)	O(n) cache + O(n) call stack	Fair — the _cache parameter leaks the implementation into the signature
+"""
+
 if __name__ == "__main__":
     print([fib_iterative(i) for i in range(11)])
     print("broken:", [fib_broken(i) for i in range(11)])
